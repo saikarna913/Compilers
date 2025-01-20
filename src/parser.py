@@ -64,7 +64,7 @@ class Parser:
 
 
 if __name__ == '__main__':
-    text = "2 + 3 * (4 - 1)"
+    text = "-3+-5*8"
     lexer = Lexer(text)
     parser = Parser(lexer)
     ast = parser.parse()
