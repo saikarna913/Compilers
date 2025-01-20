@@ -24,13 +24,6 @@ class UnaryOp(AST):
     op: str
     expr: AST
 
-# Example AST representation for: -3 + 4 * 2
-# 
-#        BinOp(+)
-#       /        \
-#   UnaryOp(-)   BinOp(*)
-#      |         /        \
-#   Number(3)  Number(4)  Number(2)
 
 def print_ast(node: AST, level: int = 0) -> None:
     """Helper function to visualize AST structure"""
