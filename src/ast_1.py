@@ -9,7 +9,7 @@ class AST:
 
 @dataclass
 class BinOp(AST):
-    """Binary operation node"""
+    """Binary operation node (for arithmetic, comparisons, and logical operators)"""
     left: AST
     op: str
     right: AST
@@ -21,7 +21,7 @@ class Number(AST):
 
 @dataclass
 class UnaryOp(AST):
-    """Unary operation node"""
+    """Unary operation node (for arithmetic unary ops and logical not)"""
     op: str
     expr: AST
 
@@ -37,7 +37,13 @@ class Var(AST):
 
 @dataclass
 class VarAssign(AST):
-    """Variable assignment node"""
+    """Variable declaration node using 'let'"""
+    name: str
+    value: AST
+
+@dataclass
+class VarReassign(AST):
+    """Variable reassignment node using 'assign'"""
     name: str
     value: AST
 
@@ -59,4 +65,7 @@ def print_ast(node: AST, level: int = 0) -> None:
         print(f"{indent}Var({node.name})")
     elif isinstance(node, VarAssign):
         print(f"{indent}VarAssign({node.name})")
+        print_ast(node.value, level + 1)
+    elif isinstance(node, VarReassign):
+        print(f"{indent}VarReassign({node.name})")
         print_ast(node.value, level + 1)

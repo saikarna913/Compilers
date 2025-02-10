@@ -1,7 +1,7 @@
 # evaluator.py
 from lexer import Lexer
 from parser import Parser
-from ast_1 import BinOp, Number, UnaryOp, Boolean, Var, VarAssign
+from ast_1 import (BinOp, Number, UnaryOp, Boolean, Var, VarAssign, VarReassign)
 import traceback
 
 class Interpreter:
@@ -32,6 +32,22 @@ class Interpreter:
             if right == 0:
                 raise ZeroDivisionError("Division by zero")
             return self.visit(node.left) // right
+        elif node.op == '<':
+            return self.visit(node.left) < self.visit(node.right)
+        elif node.op == '>':
+            return self.visit(node.left) > self.visit(node.right)
+        elif node.op == '<=':
+            return self.visit(node.left) <= self.visit(node.right)
+        elif node.op == '>=':
+            return self.visit(node.left) >= self.visit(node.right)
+        elif node.op == '==':
+            return self.visit(node.left) == self.visit(node.right)
+        elif node.op == '!=':
+            return self.visit(node.left) != self.visit(node.right)
+        elif node.op == 'and':
+            return self.visit(node.left) and self.visit(node.right)
+        elif node.op == 'or':
+            return self.visit(node.left) or self.visit(node.right)
         else:
             raise Exception(f"Unknown binary operator {node.op}")
 
@@ -43,6 +59,8 @@ class Interpreter:
             return +self.visit(node.expr)
         elif node.op == '-':
             return -self.visit(node.expr)
+        elif node.op == 'not':
+            return not self.visit(node.expr)
         else:
             raise Exception(f"Unknown unary operator {node.op}")
 
@@ -60,11 +78,17 @@ class Interpreter:
         self.env[node.name] = value
         return value
 
+    def visit_VarReassign(self, node: VarReassign):
+        if node.name not in self.env:
+            raise Exception(f"Variable '{node.name}' is not declared.")
+        self.env[node.name] = self.visit(node.value)
+        return self.env[node.name]
+
     def visit(self, node):
         method_name = f'visit_{type(node).__name__}'
         visitor = getattr(self, method_name, None)
         if visitor is None:
-            raise Exception(f'No visitor found for {type(node).__name__}')
+            raise Exception(f"No visitor found for {type(node).__name__}")
         return visitor(node)
 
     def interpret(self, tree):
