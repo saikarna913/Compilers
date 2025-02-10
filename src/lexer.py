@@ -9,6 +9,9 @@ PLUS       = 'PLUS'
 MINUS      = 'MINUS'
 MULTIPLY   = 'MULTIPLY'
 DIVIDE     = 'DIVIDE'
+EXPONENT   = 'EXPONENT'   # For '**'
+REM        = 'REM'        # For remainder operator
+QUOT       = 'QUOT'       # For integer division
 LPAREN     = 'LPAREN'
 RPAREN     = 'RPAREN'
 EQUALS     = 'EQUALS'
@@ -39,6 +42,14 @@ class Lexer:
             self.current_char = None
         else:
             self.current_char = self.text[self.pos]
+
+    def peek(self):
+        """Return the next character without advancing the position pointer."""
+        peek_pos = self.pos + 1
+        if peek_pos > len(self.text) - 1:
+            return None
+        else:
+            return self.text[peek_pos]
 
     def skip_whitespace(self):
         """Skip whitespace characters."""
@@ -75,6 +86,10 @@ class Lexer:
             return Token(TRUE, True)
         elif result == 'False':
             return Token(FALSE, False)
+        elif result == 'rem':
+            return Token(REM, result)
+        elif result == 'quot':
+            return Token(QUOT, result)
         else:
             return Token(IDENTIFIER, result)
 
@@ -91,6 +106,13 @@ class Lexer:
             if self.current_char.isalpha():
                 return self.identifier()
 
+            if self.current_char == '*':
+                self.advance()
+                if self.current_char == '*':
+                    self.advance()
+                    return Token(EXPONENT, '**')
+                return Token(MULTIPLY, '*')
+
             if self.current_char == '+':
                 self.advance()
                 return Token(PLUS, '+')
@@ -98,10 +120,6 @@ class Lexer:
             if self.current_char == '-':
                 self.advance()
                 return Token(MINUS, '-')
-
-            if self.current_char == '*':
-                self.advance()
-                return Token(MULTIPLY, '*')
 
             if self.current_char == '/':
                 self.advance()
@@ -124,8 +142,8 @@ class Lexer:
         return Token(EOF, None)
 
 if __name__ == '__main__':
-    # Example: variable declaration
-    text = "let x = 10"
+    # Example input using the new operators:
+    text = "3.14 + 2 * (4 - 1) ** 2 rem 3 quot 2"
     lexer = Lexer(text)
     token = lexer.get_next_token()
     while token.type != EOF:

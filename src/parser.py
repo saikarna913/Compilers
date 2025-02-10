@@ -1,5 +1,5 @@
 # parser.py
-from lexer import Lexer, Token, LET, IDENTIFIER, EQUALS, TRUE, FALSE, PLUS, MINUS, MULTIPLY, DIVIDE, LPAREN, RPAREN, INTEGER, FLOAT, EOF
+from lexer import Lexer, Token, LET, IDENTIFIER, EQUALS, TRUE, FALSE, PLUS, MINUS, MULTIPLY, DIVIDE, EXPONENT, REM, QUOT, LPAREN, RPAREN, INTEGER, FLOAT, EOF
 from ast_1 import AST, BinOp, Number, UnaryOp, Boolean, Var, VarAssign, print_ast
 
 class Parser:
@@ -64,14 +64,23 @@ class Parser:
         else:
             self.error()
 
-    def term(self) -> AST:
-        """term : factor ((MULTIPLY | DIVIDE) factor)*"""
+    def power(self) -> AST:
+        """power : factor (EXPONENT power)?"""
         node = self.factor()
+        if self.current_token.type == EXPONENT:
+            token = self.current_token
+            self.eat(EXPONENT)
+            node = BinOp(left=node, op=token.value, right=self.power())
+        return node
 
-        while self.current_token.type in (MULTIPLY, DIVIDE):
+    def term(self) -> AST:
+        """term : power ((MULTIPLY | DIVIDE | REM | QUOT) power)*"""
+        node = self.power()
+
+        while self.current_token.type in (MULTIPLY, DIVIDE, REM, QUOT):
             token = self.current_token
             self.eat(token.type)
-            node = BinOp(left=node, op=token.value, right=self.factor())
+            node = BinOp(left=node, op=token.value, right=self.power())
 
         return node
 
@@ -94,8 +103,8 @@ class Parser:
             return self.expr()
 
 if __name__ == '__main__':
-    # Example: parse a let statement
-    text = "let x = 10 + 20"
+    # Example: parse a let statement using exponentiation and the new operators
+    text = "let x = 2 ** 3 + 10 rem 3"
     lexer = Lexer(text)
     parser = Parser(lexer)
     ast = parser.parse()

@@ -20,6 +20,20 @@ class Interpreter:
             if right == 0:
                 raise ZeroDivisionError("Division by zero")
             return self.visit(node.left) / right
+        elif node.op == '**':
+            return self.visit(node.left) ** self.visit(node.right)
+        elif node.op == 'rem':
+            right = self.visit(node.right)
+            if right == 0:
+                raise ZeroDivisionError("Division by zero")
+            return self.visit(node.left) % right
+        elif node.op == 'quot':
+            right = self.visit(node.right)
+            if right == 0:
+                raise ZeroDivisionError("Division by zero")
+            return self.visit(node.left) // right
+        else:
+            raise Exception(f"Unknown binary operator {node.op}")
 
     def visit_Number(self, node: Number):
         return node.value
@@ -29,6 +43,8 @@ class Interpreter:
             return +self.visit(node.expr)
         elif node.op == '-':
             return -self.visit(node.expr)
+        else:
+            raise Exception(f"Unknown unary operator {node.op}")
 
     def visit_Boolean(self, node: Boolean):
         return node.value
@@ -64,7 +80,6 @@ class Calculator:
             result = interpreter.interpret(tree)
             return result
         except Exception as e:
-            # Print the full traceback for debugging purposes
             traceback.print_exc()
             raise
 
