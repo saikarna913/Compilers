@@ -1,8 +1,13 @@
+# evaluator.py
 from lexer import Lexer
 from parser import Parser
-from ast_1 import BinOp, Number, UnaryOp
+from ast_1 import BinOp, Number, UnaryOp, Boolean, Var, VarAssign
+import traceback
 
 class Interpreter:
+    def __init__(self):
+        self.env = {}  # Environment for variable storage
+
     def visit_BinOp(self, node: BinOp):
         if node.op == '+':
             return self.visit(node.left) + self.visit(node.right)
@@ -14,7 +19,7 @@ class Interpreter:
             right = self.visit(node.right)
             if right == 0:
                 raise ZeroDivisionError("Division by zero")
-            return self.visit(node.left) / self.visit(node.right)
+            return self.visit(node.left) / right
 
     def visit_Number(self, node: Number):
         return node.value
@@ -24,6 +29,20 @@ class Interpreter:
             return +self.visit(node.expr)
         elif node.op == '-':
             return -self.visit(node.expr)
+
+    def visit_Boolean(self, node: Boolean):
+        return node.value
+
+    def visit_Var(self, node: Var):
+        if node.name in self.env:
+            return self.env[node.name]
+        else:
+            raise Exception(f"Undefined variable '{node.name}'")
+
+    def visit_VarAssign(self, node: VarAssign):
+        value = self.visit(node.value)
+        self.env[node.name] = value
+        return value
 
     def visit(self, node):
         method_name = f'visit_{type(node).__name__}'
@@ -36,7 +55,7 @@ class Interpreter:
         return self.visit(tree)
 
 class Calculator:
-    def calculate(self, expression: str) -> float:
+    def calculate(self, expression: str):
         try:
             lexer = Lexer(expression)
             parser = Parser(lexer)
@@ -45,7 +64,9 @@ class Calculator:
             result = interpreter.interpret(tree)
             return result
         except Exception as e:
-            raise Exception(f"Error calculating expression: {str(e)}")
+            # Print the full traceback for debugging purposes
+            traceback.print_exc()
+            raise
 
 def main():
     calculator = Calculator()

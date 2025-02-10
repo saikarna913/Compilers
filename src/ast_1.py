@@ -1,5 +1,6 @@
+# ast_1.py
 from dataclasses import dataclass
-from typing import Union, Optional
+from typing import Union
 
 @dataclass
 class AST:
@@ -24,6 +25,21 @@ class UnaryOp(AST):
     op: str
     expr: AST
 
+@dataclass
+class Boolean(AST):
+    """Boolean literal node"""
+    value: bool
+
+@dataclass
+class Var(AST):
+    """Variable reference node"""
+    name: str
+
+@dataclass
+class VarAssign(AST):
+    """Variable assignment node"""
+    name: str
+    value: AST
 
 def print_ast(node: AST, level: int = 0) -> None:
     """Helper function to visualize AST structure"""
@@ -37,3 +53,10 @@ def print_ast(node: AST, level: int = 0) -> None:
         print_ast(node.expr, level + 1)
     elif isinstance(node, Number):
         print(f"{indent}Number({node.value})")
+    elif isinstance(node, Boolean):
+        print(f"{indent}Boolean({node.value})")
+    elif isinstance(node, Var):
+        print(f"{indent}Var({node.name})")
+    elif isinstance(node, VarAssign):
+        print(f"{indent}VarAssign({node.name})")
+        print_ast(node.value, level + 1)

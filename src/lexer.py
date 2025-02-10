@@ -1,21 +1,27 @@
+# lexer.py
 from dataclasses import dataclass
 from typing import Optional
 
 # Token types
-INTEGER = 'INTEGER'
-FLOAT = 'FLOAT'
-PLUS = 'PLUS'
-MINUS = 'MINUS'
-MULTIPLY = 'MULTIPLY'
-DIVIDE = 'DIVIDE'
-LPAREN = 'LPAREN'
-RPAREN = 'RPAREN'
-EOF = 'EOF'
+INTEGER    = 'INTEGER'
+FLOAT      = 'FLOAT'
+PLUS       = 'PLUS'
+MINUS      = 'MINUS'
+MULTIPLY   = 'MULTIPLY'
+DIVIDE     = 'DIVIDE'
+LPAREN     = 'LPAREN'
+RPAREN     = 'RPAREN'
+EQUALS     = 'EQUALS'
+LET        = 'LET'
+IDENTIFIER = 'IDENTIFIER'
+TRUE       = 'TRUE'
+FALSE      = 'FALSE'
+EOF        = 'EOF'
 
 @dataclass
 class Token:
     type: str
-    value: Optional[str]
+    value: Optional[any]
 
 class Lexer:
     def __init__(self, text: str):
@@ -27,7 +33,7 @@ class Lexer:
         raise Exception('Invalid character')
 
     def advance(self):
-        """Advance the position pointer and set the current_char"""
+        """Advance the position pointer and set the current_char."""
         self.pos += 1
         if self.pos > len(self.text) - 1:
             self.current_char = None
@@ -35,12 +41,12 @@ class Lexer:
             self.current_char = self.text[self.pos]
 
     def skip_whitespace(self):
-        """Skip whitespace characters"""
+        """Skip whitespace characters."""
         while self.current_char and self.current_char.isspace():
             self.advance()
 
     def number(self):
-        """Return a number token (integer or float)"""
+        """Return a number token (integer or float)."""
         result = ''
         while self.current_char and self.current_char.isdigit():
             result += self.current_char
@@ -56,16 +62,34 @@ class Lexer:
         
         return Token(INTEGER, int(result))
 
+    def identifier(self):
+        """Handle identifiers and reserved keywords."""
+        result = ''
+        while self.current_char and (self.current_char.isalnum() or self.current_char == '_'):
+            result += self.current_char
+            self.advance()
+        
+        if result == 'let':
+            return Token(LET, result)
+        elif result == 'True':
+            return Token(TRUE, True)
+        elif result == 'False':
+            return Token(FALSE, False)
+        else:
+            return Token(IDENTIFIER, result)
+
     def get_next_token(self):
-        """Lexical analyzer (tokenizer)"""
+        """Lexical analyzer (tokenizer)."""
         while self.current_char:
-            
             if self.current_char.isspace():
                 self.skip_whitespace()
                 continue
 
             if self.current_char.isdigit():
                 return self.number()
+
+            if self.current_char.isalpha():
+                return self.identifier()
 
             if self.current_char == '+':
                 self.advance()
@@ -91,12 +115,17 @@ class Lexer:
                 self.advance()
                 return Token(RPAREN, ')')
 
+            if self.current_char == '=':
+                self.advance()
+                return Token(EQUALS, '=')
+
             self.error()
 
         return Token(EOF, None)
 
 if __name__ == '__main__':
-    text = "3.14 + 2 * (4 - 1)"
+    # Example: variable declaration
+    text = "let x = 10"
     lexer = Lexer(text)
     token = lexer.get_next_token()
     while token.type != EOF:
