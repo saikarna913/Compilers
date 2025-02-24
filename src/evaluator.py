@@ -1,123 +1,63 @@
-# evaluator.py
-from lexer import Lexer
+from lexer import Token, TokenType, Lexer
 from parser import Parser
-from ast_1 import (BinOp, Number, UnaryOp, Boolean, Var, VarAssign, VarReassign)
-import traceback
-
 class Interpreter:
-    def __init__(self):
-        self.env = {}  # Environment for variable storage
-
-    def visit_BinOp(self, node: BinOp):
-        if node.op == '+':
-            return self.visit(node.left) + self.visit(node.right)
-        elif node.op == '-':
-            return self.visit(node.left) - self.visit(node.right)
-        elif node.op == '*':
-            return self.visit(node.left) * self.visit(node.right)
-        elif node.op == '/':
-            right = self.visit(node.right)
-            if right == 0:
-                raise ZeroDivisionError("Division by zero")
-            return self.visit(node.left) / right
-        elif node.op == '**':
-            return self.visit(node.left) ** self.visit(node.right)
-        elif node.op == 'rem':
-            right = self.visit(node.right)
-            if right == 0:
-                raise ZeroDivisionError("Division by zero")
-            return self.visit(node.left) % right
-        elif node.op == 'quot':
-            right = self.visit(node.right)
-            if right == 0:
-                raise ZeroDivisionError("Division by zero")
-            return self.visit(node.left) // right
-        elif node.op == '<':
-            return self.visit(node.left) < self.visit(node.right)
-        elif node.op == '>':
-            return self.visit(node.left) > self.visit(node.right)
-        elif node.op == '<=':
-            return self.visit(node.left) <= self.visit(node.right)
-        elif node.op == '>=':
-            return self.visit(node.left) >= self.visit(node.right)
-        elif node.op == '==':
-            return self.visit(node.left) == self.visit(node.right)
-        elif node.op == '!=':
-            return self.visit(node.left) != self.visit(node.right)
-        elif node.op == 'and':
-            return self.visit(node.left) and self.visit(node.right)
-        elif node.op == 'or':
-            return self.visit(node.left) or self.visit(node.right)
+    def __init__(self, ast):
+        self.ast = ast
+        self.variables = {}
+    
+    def execute(self):
+        for statement in self.ast:
+            self.execute_statement(statement)
+    
+    def execute_statement(self, statement):
+        if statement[0] == 'assign':
+            _, var_name, expr = statement
+            self.variables[var_name] = self.evaluate_expression(expr)
+        elif statement[0] == 'if':
+            _, condition, body = statement
+            if self.evaluate_expression(condition):
+                for stmt in body:
+                    self.execute_statement(stmt)
+        elif statement[0] == 'while':
+            _, condition, body = statement
+            while self.evaluate_expression(condition):
+                for stmt in body:
+                    self.execute_statement(stmt)
+        elif statement[0] == 'for':
+            _, initialization, condition, increment, body = statement
+            self.execute_statement(initialization)
+            while self.evaluate_expression(condition):
+                for stmt in body:
+                    self.execute_statement(stmt)
+                self.execute_statement(increment)
+        elif statement[0] == 'repeat_until':
+            _, body, condition = statement
+            while True:
+                for stmt in body:
+                    self.execute_statement(stmt)
+                if self.evaluate_expression(condition):
+                    break
+        elif statement[0] == 'print':
+            _, expr = statement
+            print(self.evaluate_expression(expr))
+    
+    def evaluate_expression(self, expr):
+        if expr[0] == 'string':
+            return expr[1]
+        elif expr[0] == 'array':
+            return [self.evaluate_expression(e) for e in expr[1]]
+        elif expr[0] == 'product':
+            return tuple(self.evaluate_expression(e) for e in expr[1])
+        elif expr[0] == 'sum':
+            return [self.evaluate_expression(e) for e in expr[1]]
         else:
-            raise Exception(f"Unknown binary operator {node.op}")
+            return eval(expr, {}, self.variables)
 
-    def visit_Number(self, node: Number):
-        return node.value
-
-    def visit_UnaryOp(self, node: UnaryOp):
-        if node.op == '+':
-            return +self.visit(node.expr)
-        elif node.op == '-':
-            return -self.visit(node.expr)
-        elif node.op == 'not':
-            return not self.visit(node.expr)
-        else:
-            raise Exception(f"Unknown unary operator {node.op}")
-
-    def visit_Boolean(self, node: Boolean):
-        return node.value
-
-    def visit_Var(self, node: Var):
-        if node.name in self.env:
-            return self.env[node.name]
-        else:
-            raise Exception(f"Undefined variable '{node.name}'")
-
-    def visit_VarAssign(self, node: VarAssign):
-        value = self.visit(node.value)
-        self.env[node.name] = value
-        return value
-
-    def visit_VarReassign(self, node: VarReassign):
-        if node.name not in self.env:
-            raise Exception(f"Variable '{node.name}' is not declared.")
-        self.env[node.name] = self.visit(node.value)
-        return self.env[node.name]
-
-    def visit(self, node):
-        method_name = f'visit_{type(node).__name__}'
-        visitor = getattr(self, method_name, None)
-        if visitor is None:
-            raise Exception(f"No visitor found for {type(node).__name__}")
-        return visitor(node)
-
-    def interpret(self, tree):
-        return self.visit(tree)
-
-class Calculator:
-    def calculate(self, expression: str):
-        try:
-            lexer = Lexer(expression)
-            parser = Parser(lexer)
-            tree = parser.parse()
-            interpreter = Interpreter()
-            result = interpreter.interpret(tree)
-            return result
-        except Exception as e:
-            traceback.print_exc()
-            raise
-
-def main():
-    calculator = Calculator()
-    while True:
-        try:
-            expression = input('calc> ')
-            if expression.lower() in ['exit', 'quit']:
-                break
-            result = calculator.calculate(expression)
-            print(f"Result: {result}")
-        except Exception as e:
-            print(f"Error: {e}")
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    code = "let x = 10 + 5 * 2; if (x > 10) { print(x); }"
+    lexer = Lexer(code)
+    tokens = lexer.tokenize()
+    parser = Parser(tokens)
+    ast = parser.parse()
+    interpreter = Interpreter(ast)
+    interpreter.execute()
