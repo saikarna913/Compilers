@@ -12,5 +12,5 @@ python -m unittest test_lexer.py
 Test Parser code:
 
 ```
-python parserr.py testfile.txt
+python parser.py testfile.txt
 ```

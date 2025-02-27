@@ -1,165 +1,210 @@
-import sys
+# lexer.py
+from dataclasses import dataclass
+from typing import Optional
 
-class TokenType:
-    NUMBER = "NUMBER"
-    BOOLEAN = "BOOLEAN"
-    STRING = "STRING"
-    ARRAY = "ARRAY"
-    LET = "LET"
-    ASSIGN = "ASSIGN"
-    IF = "IF"
-    ELSE = "ELSE"
-    WHILE = "WHILE"
-    FOR = "FOR"
-    REPEAT = "REPEAT"
-    UNTIL = "UNTIL"
-    PRINT = "PRINT"
-    FUNC = "FUNC"
-    RETURN = "RETURN"
-    IDENTIFIER = "IDENTIFIER"
-    OPERATOR = "OPERATOR"
-    COMPARISON = "COMPARISON"
-    LOGICAL = "LOGICAL"
-    LPAREN = "LPAREN"
-    RPAREN = "RPAREN"
-    LBRACE = "LBRACE"
-    RBRACE = "RBRACE"
-    LBRACKET = "LBRACKET"
-    RBRACKET = "RBRACKET"
-    COMMA = "COMMA"
-    SEMICOLON = "SEMICOLON"
-    PRODUCT_TYPE = "PRODUCT_TYPE"
-    SUM_TYPE = "SUM_TYPE"
+# Existing token types...
+INTEGER    = 'INTEGER'
+FLOAT      = 'FLOAT'
+PLUS       = 'PLUS'
+MINUS      = 'MINUS'
+MULTIPLY   = 'MULTIPLY'
+DIVIDE     = 'DIVIDE'
+EXPONENT   = 'EXPONENT'
+REM        = 'REM'
+QUOT       = 'QUOT'
+LPAREN     = 'LPAREN'
+RPAREN     = 'RPAREN'
+EQUALS     = 'EQUALS'
+LET        = 'LET'
+ASSIGN     = 'ASSIGN'
+IDENTIFIER = 'IDENTIFIER'
+TRUE       = 'TRUE'
+FALSE      = 'FALSE'
+LT         = 'LT'
+GT         = 'GT'
+LTE        = 'LTE'
+GTE        = 'GTE'
+EQEQ       = 'EQEQ'
+NOTEQ      = 'NOTEQ'
+AND        = 'AND'
+OR         = 'OR'
+NOT        = 'NOT'
+EOF        = 'EOF'
+IF         = 'IF'
+ELSE       = 'ELSE'
+WHILE      = 'WHILE'
+LBRACE     = 'LBRACE'
+RBRACE     = 'RBRACE'
 
+# New tokens for for loop
+FOR        = 'FOR'
+TO         = 'TO'
+READ       = 'READ'
+PRINT      = 'PRINT'
+
+# New tokens for function defnition
+FUNC     = 'FUNC'       
+RETURN   = 'RETURN'    
+COMMA    = 'COMMA' 
+SEMICOLON = 'SEMICOLON'     
+
+
+@dataclass
 class Token:
-    def __init__(self, type, value):
-        self.type = type
-        self.value = value
-    
-    def __repr__(self):
-        return f"Token({self.type}, {self.value})"
+    type: str
+    value: Optional[any]
 
 class Lexer:
-    def __init__(self, source_code):
-        self.source_code = source_code
-        self.position = 0
-        self.tokens = []
+    def __init__(self, text: str):
+        self.text = text
+        self.pos = 0
+        self.current_char = self.text[0] if text else None
 
-    def tokenize(self):
-        try:
-            keywords = {"let": TokenType.LET, "assign": TokenType.ASSIGN, "if": TokenType.IF, "else": TokenType.ELSE,
-                        "while": TokenType.WHILE, "for": TokenType.FOR, "repeat": TokenType.REPEAT, "until": TokenType.UNTIL,
-                        "print": TokenType.PRINT, "func": TokenType.FUNC, "return": TokenType.RETURN, "True": TokenType.BOOLEAN,
-                        "False": TokenType.BOOLEAN, "and": TokenType.LOGICAL, "or": TokenType.LOGICAL, "not": TokenType.LOGICAL,
-                        "product": TokenType.PRODUCT_TYPE, "sum": TokenType.SUM_TYPE}
-            operators = {"+": TokenType.OPERATOR, "-": TokenType.OPERATOR, "*": TokenType.OPERATOR, "/": TokenType.OPERATOR,
-                         "**": TokenType.OPERATOR, "rem": TokenType.OPERATOR, "quot": TokenType.OPERATOR}
-            comparisons = {"<": TokenType.COMPARISON, ">": TokenType.COMPARISON, "<=": TokenType.COMPARISON,
-                           ">=": TokenType.COMPARISON, "==": TokenType.COMPARISON, "!=": TokenType.COMPARISON}
-            symbols = {"(": TokenType.LPAREN, ")": TokenType.RPAREN, "{": TokenType.LBRACE, "}": TokenType.RBRACE, 
-                       "[": TokenType.LBRACKET, "]": TokenType.RBRACKET, ",": TokenType.COMMA, ";": TokenType.SEMICOLON}
-            
-            while self.position < len(self.source_code):
-                char = self.source_code[self.position]
-                
-                if char.isspace():
-                    self.position += 1
-                    continue
-                
-                if char.isdigit() or (char == '.' and self.position + 1 < len(self.source_code) and self.source_code[self.position + 1].isdigit()):
-                    self.tokens.append(Token(TokenType.NUMBER, self.extract_number()))
-                    continue
-                
-                if char.isalpha() or char == '_':
-                    word = self.extract_identifier()
-                    self.tokens.append(Token(keywords.get(word, TokenType.IDENTIFIER), word))
-                    continue
-                
-                if char in operators or self.peek_two_chars() in operators:
-                    self.tokens.append(Token(TokenType.OPERATOR, self.extract_operator()))
-                    continue
-                
-                if char in comparisons or self.peek_two_chars() in comparisons:
-                    self.tokens.append(Token(TokenType.COMPARISON, self.extract_comparison()))
-                    continue
-                
-                if char == '"':
-                    self.tokens.append(Token(TokenType.STRING, self.extract_string()))
-                    continue
-                
-                if char == '[':
-                    self.tokens.append(Token(TokenType.ARRAY, self.extract_array()))
-                    continue
-                
-                if char in symbols:
-                    self.tokens.append(Token(symbols[char], char))
-                    self.position += 1
-                    continue
-                
-                raise SyntaxError(f'Unexpected token: {char}')
-        
-        except Exception as e:
-            print(f"Lexer Error: {e}")
-            sys.exit(1)
-        
-        return self.tokens
-    
-    def peek_two_chars(self):
-        return self.source_code[self.position:self.position+2]
-    
-    def extract_number(self):
-        num = ""
-        while self.position < len(self.source_code) and (self.source_code[self.position].isdigit() or self.source_code[self.position] == '.'):
-            num += self.source_code[self.position]
-            self.position += 1
-        return num
-    
-    def extract_identifier(self):
-        word = ""
-        while self.position < len(self.source_code) and (self.source_code[self.position].isalnum() or self.source_code[self.position] == '_'):
-            word += self.source_code[self.position]
-            self.position += 1
-        return word
-    
-    def extract_operator(self):
-        op = self.peek_two_chars() if self.peek_two_chars() in {"**", "rem", "quot"} else self.source_code[self.position]
-        self.position += len(op)
-        return op
-    
-    def extract_comparison(self):
-        comp = self.peek_two_chars() if self.peek_two_chars() in {"<=", ">=", "==", "!="} else self.source_code[self.position]
-        self.position += len(comp)
-        return comp
-    
-    def extract_string(self):
-        start = self.position + 1
-        self.position = self.source_code.find('"', start)
-        if self.position == -1:
-            raise SyntaxError("Unterminated string literal")
-        string_value = self.source_code[start:self.position]
-        self.position += 1
-        return string_value
-    
-    def extract_array(self):
-        start = self.position
-        self.position = self.source_code.find(']', start)
-        if self.position == -1:
-            raise SyntaxError("Unterminated array declaration")
-        self.position += 1
-        return self.source_code[start:self.position]
+    def error(self):
+        raise Exception('Invalid character')
 
-#if __name__ == "__main__":
-    #if len(sys.argv) < 2:
-       # print("Usage: python lexer.py <filename>")
-       # sys.exit(1)
-    
-    #filename = sys.argv[1]
-   # try:
-        #with open(filename, 'r') as file:
-           # source_code = file.read()
-        #lexer = Lexer(source_code)
-       # tokens = lexer.tokenize()
-        #print(tokens)
-    #except FileNotFoundError:
-     #   print(f"Error: File '{filename}' not found.")
-      #  sys.exit(1)
+    def advance(self):
+        self.pos += 1
+        if self.pos > len(self.text) - 1:
+            self.current_char = None
+        else:
+            self.current_char = self.text[self.pos]
+
+    def peek(self):
+        peek_pos = self.pos + 1
+        if peek_pos > len(self.text) - 1:
+            return None
+        return self.text[peek_pos]
+
+    def skip_whitespace(self):
+        while self.current_char and self.current_char.isspace():
+            self.advance()
+
+    def number(self):
+        result = ''
+        while self.current_char and self.current_char.isdigit():
+            result += self.current_char
+            self.advance()
+        if self.current_char == '.':
+            result += self.current_char
+            self.advance()
+            while self.current_char and self.current_char.isdigit():
+                result += self.current_char
+                self.advance()
+            return Token(FLOAT, float(result))
+        return Token(INTEGER, int(result))
+
+    def identifier(self):
+        result = ''
+        while self.current_char and (self.current_char.isalnum() or self.current_char == '_'):
+            result += self.current_char
+            self.advance()
+        if result == 'func':
+            return Token(FUNC, result)
+        elif result == 'return':
+            return Token(RETURN,result)
+        elif result == 'let':
+            return Token(LET, result)
+        elif result == 'assign':
+            return Token(ASSIGN, result)
+        elif result == 'True':
+            return Token(TRUE, True)
+        elif result == 'False':
+            return Token(FALSE, False)
+        elif result == 'rem':
+            return Token(REM, result)
+        elif result == 'quot':
+            return Token(QUOT, result)
+        elif result == 'and':
+            return Token(AND, result)
+        elif result == 'or':
+            return Token(OR, result)
+        elif result == 'not':
+            return Token(NOT, result)
+        elif result == 'if':
+            return Token(IF, result)
+        elif result == 'else':
+            return Token(ELSE, result)
+        elif result == 'while':
+            return Token(WHILE, result)
+        elif result == 'for':
+            return Token(FOR, result)
+        elif result == 'to':
+            return Token(TO, result)
+        elif result == 'read':
+            return Token(READ, result)
+        elif result == 'print':
+            return Token(PRINT, result)
+        else:
+            return Token(IDENTIFIER, result)
+
+    def get_next_token(self):
+        while self.current_char:
+            if self.current_char.isspace():
+                self.skip_whitespace()
+                continue
+            if self.current_char.isdigit():
+                return self.number()
+            if self.current_char.isalpha():
+                return self.identifier()
+            if self.current_char == '+':
+                self.advance()
+                return Token(PLUS, '+')
+            if self.current_char == '-':
+                self.advance()
+                return Token(MINUS, '-')
+            if self.current_char == '*':
+                self.advance()
+                if self.current_char == '*':
+                    self.advance()
+                    return Token(EXPONENT, '**')
+                return Token(MULTIPLY, '*')
+            if self.current_char == '/':
+                self.advance()
+                return Token(DIVIDE, '/')
+            if self.current_char == '(':
+                self.advance()
+                return Token(LPAREN, '(')
+            if self.current_char == ')':
+                self.advance()
+                return Token(RPAREN, ')')
+            if self.current_char == '{':
+                self.advance()
+                return Token(LBRACE, '{')
+            if self.current_char == '}':
+                self.advance()
+                return Token(RBRACE, '}')
+            if self.current_char == '<':
+                self.advance()
+                if self.current_char == '=':
+                    self.advance()
+                    return Token(LTE, '<=')
+                return Token(LT, '<')
+            if self.current_char == '>':
+                self.advance()
+                if self.current_char == '=':
+                    self.advance()
+                    return Token(GTE, '>=')
+                return Token(GT, '>')
+            if self.current_char == '=':
+                self.advance()
+                if self.current_char == '=':
+                    self.advance()
+                    return Token(EQEQ, '==')
+                return Token(EQUALS, '=')
+            if self.current_char == '!':
+                self.advance()
+                if self.current_char == '=':
+                    self.advance()
+                    return Token(NOTEQ, '!=')
+                self.error()
+            if self.current_char == ',':
+                self.advance()
+                return Token(COMMA, ',')
+            if self.current_char == ';':
+                self.advance()
+                return Token(SEMICOLON, ';')
+
+            self.error()
+
+        return Token(EOF, None)
