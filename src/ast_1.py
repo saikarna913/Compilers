@@ -8,9 +8,7 @@ class AST:
     """Base AST node class"""
     def accept(self, visitor: 'Visitor') -> Any:
         """Accept method for the Visitor pattern"""
-        # Convert CamelCase to snake_case correctly
         class_name = self.__class__.__name__
-        # This regex adds underscore before capital letters and then lowercases everything
         method_name = f"visit_{re.sub(r'(?<!^)(?=[A-Z])', '_', class_name).lower()}"
         return getattr(visitor, method_name)(self)
 
@@ -18,13 +16,13 @@ class AST:
 class BinOp(AST):
     """Binary operation node"""
     left: AST
-    operator: Token  # Token object for operator (e.g., +, -, *)
+    operator: Token
     right: AST
 
 @dataclass
 class UnaryOp(AST):
     """Unary operation node"""
-    operator: Token  # Token object (e.g., -, not)
+    operator: Token
     right: AST
 
 @dataclass
@@ -51,21 +49,21 @@ class String(AST):
 class Var(AST):
     """Variable reference node"""
     name: str
-    token: Token  # Added for error reporting
+    token: Token
 
 @dataclass
 class VarAssign(AST):
     """Variable declaration node (let)"""
     name: str
     value: AST
-    token: Token  # Added for error reporting
+    token: Token
 
 @dataclass
 class VarReassign(AST):
     """Variable reassignment node (assign)"""
     name: str
     value: AST
-    token: Token  # Added for error reporting
+    token: Token
 
 @dataclass
 class Block(AST):
@@ -91,7 +89,7 @@ class For(AST):
     start: AST
     end: AST
     body: AST
-    step: Optional[AST] = None  # Has a default value
+    step: Optional[AST] = None
 
 @dataclass
 class RepeatUntil(AST):
@@ -108,7 +106,7 @@ class Match(AST):
 @dataclass
 class MatchCase(AST):
     """Case in a match statement"""
-    pattern: AST  # Literal pattern for now
+    pattern: AST
     body: AST
 
 @dataclass
@@ -118,27 +116,27 @@ class FuncDef(AST):
     params: List[str]
     body: AST
     env: Optional[Any] = None
-    token: Optional[Token] = None  # For error reporting
+    token: Optional[Token] = None
 
 @dataclass
 class FuncCall(AST):
     """Function call node"""
-    callee: AST  # Changed to AST to match parser.py
+    callee: AST
     args: List[AST]
-    token: Optional[Token] = None  # For error reporting
+    token: Optional[Token] = None
 
 @dataclass
 class Return(AST):
     """Return statement node"""
     value: AST
-    token: Optional[Token] = None  # For error reporting
+    token: Optional[Token] = None
     
 @dataclass
 class Lambda(AST):
     """Anonymous function expression"""
     params: List[str]
     body: AST
-    token: Optional[Token] = None  # For error reporting
+    token: Optional[Token] = None
 
 @dataclass
 class Array(AST):
@@ -146,25 +144,9 @@ class Array(AST):
     elements: List[AST]
 
 @dataclass
-class ArrayAccess(AST):
-    """Represents accessing an array element (e.g., arr[0])"""
-    array: AST  
-    index: AST  
-    token: any = None  # Optional token for error reporting or debugging
-
-@dataclass
-class ArrayAssign(AST):
-    """Represents assigning a value to an array index (e.g., arr[1] = 5)"""
-    array: AST
-    index: AST
-    value: AST
-    token: any =None 
-
-
-@dataclass
 class Dict(AST):
     """Dictionary literal node"""
-    pairs: List[Tuple[AST, AST]]  # List of (key, value) pairs
+    pairs: List[Tuple[AST, AST]]
 
 @dataclass
 class ConditionalExpr(AST):
@@ -177,6 +159,7 @@ class ConditionalExpr(AST):
 class Print(AST):
     """Print statement node"""
     expression: AST
+    token: Optional[Token] = None
 
 # Visitor interface
 class Visitor:
@@ -263,8 +246,13 @@ class AstPrinter(Visitor):
         return self.parenthesize("repeat-until", node.body, node.condition)
 
     def visit_match(self, node: Match) -> str:
-        cases = [case.accept(self) for case in node.cases]
-        return self.parenthesize("match", node.expression, *cases)
+        # Get the expression string
+        expr_str = node.expression.accept(self)
+        # Get case strings
+        case_strings = [case.accept(self) for case in node.cases]
+        # Join cases into a single string
+        cases_str = " ".join(case_strings)
+        return f"(match {expr_str} {cases_str})"
 
     def visit_match_case(self, node: MatchCase) -> str:
         return self.parenthesize("case", node.pattern, node.body)
@@ -288,8 +276,11 @@ class AstPrinter(Visitor):
         return self.parenthesize("array", *node.elements)
 
     def visit_dict(self, node: Dict) -> str:
-        pairs = [self.parenthesize("pair", key, value) for key, value in node.pairs]
-        return self.parenthesize("dict", *pairs)
+        # Convert pairs to strings first
+        pair_strings = [self.parenthesize("pair", key, value) for key, value in node.pairs]
+        # Join them as a single string
+        pairs_str = " ".join(pair_strings)
+        return f"(dict {pairs_str})"
 
     def visit_conditional_expr(self, node: ConditionalExpr) -> str:
         return self.parenthesize("if-else", node.then_expr, node.condition, node.else_expr)

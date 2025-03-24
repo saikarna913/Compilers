@@ -3,12 +3,13 @@ from parser import Parser
 from ast_1 import (
     AST, BinOp, UnaryOp, Integer, Float, String, Boolean, Var, VarAssign, VarReassign, Block,
     If, While, For, RepeatUntil, Match, MatchCase, FuncDef, FuncCall, Return, Lambda,
-    Array, Dict, ConditionalExpr, Print,ArrayAssign,ArrayAccess
+    Array, Dict, ConditionalExpr, Print
 )
 import sys
 import traceback
 import re
 from typing import Any, Dict, List, Optional
+sys.setrecursionlimit(3000)
 
 class FluxRuntimeError(Exception):
     def __init__(self, token: Token, message: str):
@@ -32,12 +33,35 @@ class Environment:
         raise FluxRuntimeError(token, f"Undefined variable '{name}'")
 
     def assign(self, name: str, value: Any, token: Token):
+        # Check if variable exists in current environment
         if name in self.variables:
             self.variables[name] = value
             return value
+        
+        # If not, check parent environments
         if self.parent:
             return self.parent.assign(name, value, token)
+        
+        # If variable doesn't exist anywhere in the chain
         raise FluxRuntimeError(token, f"Cannot reassign undefined variable '{name}'")
+
+    def ancestor(self, distance: int) -> 'Environment':
+        """Get an ancestor environment at the given distance."""
+        env = self
+        for _ in range(distance):
+            if env.parent is None:
+                return env
+            env = env.parent
+        return env
+
+    def get_at(self, distance: int, name: str) -> Any:
+        """Get a variable from a specific ancestor environment."""
+        return self.ancestor(distance).variables.get(name)
+
+    def assign_at(self, distance: int, name: str, value: Any) -> Any:
+        """Assign to a variable in a specific ancestor environment."""
+        self.ancestor(distance).variables[name] = value
+        return value
 
 class TailCall(Exception):
     """Exception used for tail call optimization"""
@@ -49,10 +73,11 @@ class Return(Exception):
     def __init__(self, value: Any):
         self.value = value
         super().__init__()
+
 class Function:
     def __init__(self, declaration, closure: Environment, is_anonymous: bool = False):
         self.declaration = declaration
-        self.closure = closure
+        self.closure = closure  # Capture the environment where the function was defined
         self.is_anonymous = is_anonymous
         self.name = '<anonymous>' if is_anonymous else declaration.name
         self.params = declaration.params
@@ -68,7 +93,7 @@ class Function:
             raise FluxRuntimeError(token, 
                 f"Expected {len(self.params)} arguments, got {len(arguments)}")
         
-        # Create a new environment within the function's closure
+        # Create a new environment with the closure as parent
         env = Environment(self.closure)
         
         # Bind parameters to arguments
@@ -76,9 +101,11 @@ class Function:
             env.define(param, arg)
         
         try:
-            # Save previous function for proper nesting
+            # Save the previous environment and function
             prev_function = evaluator.current_function
             prev_env = evaluator.env
+            
+            # Set the new environment for evaluation
             evaluator.current_function = self
             evaluator.env = env
             
@@ -87,31 +114,35 @@ class Function:
                 try:
                     # Execute the function body in the new environment
                     result = evaluator.execute_block(self.declaration.body, env)
+                    
+                    # Reset to previous state
                     evaluator.current_function = prev_function
                     evaluator.env = prev_env
                     return result
+                    
                 except TailCall as tail_call:
-                    # Reset environment for a new call
+                    # Handle tail call optimization
                     if tail_call.function != self:
+                        # If the tail call is to a different function, restore state and call it
                         evaluator.current_function = prev_function
                         evaluator.env = prev_env
                         return tail_call.function.call(evaluator, tail_call.arguments, token)
                     
-                    # Reuse the same stack frame for tail recursion
-                    # Just update the arguments and loop again
+                    # For recursive tail calls, just update arguments and loop again
                     if len(tail_call.arguments) != len(self.params):
                         raise FluxRuntimeError(token, 
                             f"Expected {len(self.params)} arguments, got {len(tail_call.arguments)}")
                     
-                    # Update parameters
+                    # Update the parameters for the next iteration
                     for param, arg in zip(self.params, tail_call.arguments):
                         env.assign(param, arg, token)
                         
         except Return as r:
-            # Reset after return
+            # Handle return statements
             evaluator.current_function = prev_function
             evaluator.env = prev_env
             return r.value
+        
 class Evaluator:
     def __init__(self):
         self.global_env = Environment()
@@ -184,7 +215,6 @@ class Evaluator:
 
     def visit_var(self, node: Var) -> Any:
         return self.env.get(node.name, node.token)
-    
 
     def visit_var_assign(self, node: VarAssign) -> Any:
         value = self.evaluate(node.value)
@@ -347,19 +377,15 @@ class Evaluator:
         })
         return Function(lambda_def, self.env, is_anonymous=True)
 
-    def visit_func_def(self, node: FuncDef) -> Function:
-        # Capture the defining environment for lexical scoping (closures)
+    def visit_func_def(self, node: FuncDef) -> None:
         func = Function(node, self.env)
-        
-        # Allow recursion by binding the function name in the current environment
         self.env.define(node.name, func)
-        
-        return func  # Ensure the function object is returned
+        return func
 
     def visit_func_call(self, node: FuncCall) -> Any:
         callee = self.evaluate(node.callee)
         
-        # Ensure callee is actually a function
+        # Make sure callee is a function
         if not isinstance(callee, Function):
             raise FluxRuntimeError(
                 node.token or Token("IDENTIFIER", str(node.callee), 0), 
@@ -368,12 +394,12 @@ class Evaluator:
         
         # Evaluate the arguments
         arguments = [self.evaluate(arg) for arg in node.args]
-
-        # Tail Call Optimization (TCO) handling
+        
+        # Check if this is a tail call to the current function
         if self.in_tail_position and self.current_function is callee:
             raise TailCall(callee, arguments)
         
-        # Proper function call with lexical scoping
+        # Otherwise do a regular call
         return callee.call(self, arguments, node.token or Token("IDENTIFIER", "function call", 0))
 
     def visit_return(self, node: Return) -> Any:
@@ -385,59 +411,23 @@ class Evaluator:
         
         try:
             value = self.evaluate(node.value)
-            return value
-        except TailCall as tc:
-            # If we caught a TailCall, re-raise it to be handled by the function
-            raise
+            
+            # Handle tail call optimization directly in return statements
+            if isinstance(node.value, FuncCall) and self.in_tail_position:
+                callee = self.evaluate(node.value.callee)
+                arguments = [self.evaluate(arg) for arg in node.value.args]
+                
+                if isinstance(callee, Function) and callee == self.current_function:
+                    raise TailCall(callee, arguments)
+            
+            # Regular return
+            raise Return(value)
         finally:
             # Restore the previous tail position state
             self.in_tail_position = was_tail
 
     def visit_array(self, node: Array) -> List[Any]:
-        """Evaluates an array declaration and returns a list of evaluated elements."""
-        return [self.evaluate(element) for element in node.elements]
-
-    def visit_array_assign(self, node: ArrayAssign) -> Any:
-        """Handles array element assignment like arr[1] = 5"""
-        if isinstance(node.array, str):  # If node.array is already a string, use it directly
-            array_name = node.array
-        else:
-            array_name = node.array.name  # Get the variable name if it's an AST node
-
-        array = self.env.get(array_name, node.token)  # Retrieve array from environment
-        index = self.evaluate(node.index)  # Evaluate index expression
-        value = self.evaluate(node.value)  # Evaluate value expression
-
-        if not isinstance(array, list):
-            raise FluxRuntimeError(node.token, f"Cannot assign to non-array type: {type(array).__name__}")
-        if not isinstance(index, int):
-            raise FluxRuntimeError(node.token, f"Array index must be an integer, got {type(index).__name__}")
-        if index < 0 or index >= len(array):
-            raise FluxRuntimeError(node.token, f"Array index {index} out of bounds")
-
-        # Perform assignment
-        array[index] = value
-        self.env.assign(array_name, array, node.token)  # Store modified array back
-
-        return value
-    
-    def visit_array_access(self, node: ArrayAccess) -> Any:
-        """Handles array indexing like arr[1]"""
-        array_name = node.array if isinstance(node.array, str) else node.array.name  # Fix potential issue
-        array = self.env.get(array_name, node.token)  # Retrieve array from environment
-        index = self.evaluate(node.index)  # Evaluate index expression
-
-        if not isinstance(array, list):
-            raise FluxRuntimeError(node.token, f"Cannot index non-array type: {type(array).__name__}")
-        if not isinstance(index, int):
-            raise FluxRuntimeError(node.token, f"Array index must be an integer, got {type(index).__name__}")
-        if index < 0 or index >= len(array):
-            raise FluxRuntimeError(node.token, f"Array index {index} out of bounds")
-
-        return array[index]
-
-
-
+        return [self.evaluate(elem) for elem in node.elements]
 
     def visit_dict(self, node: Dict) -> Dict[Any, Any]:
         return {self.evaluate(k): self.evaluate(v) for k, v in node.pairs}
@@ -488,8 +478,8 @@ def run_file(filename: str):
         parser = Parser(lexer)
         tree = parser.parse()
         result = evaluator.interpret(tree)
-        #if result is not None:
-            #print(f"Final result: {evaluator.stringify(result)}")
+        if result is not None:
+            print(f"Final result: {evaluator.stringify(result)}")
     except FileNotFoundError:
         print(f"Error: File '{filename}' not found.")
     except Exception as e:

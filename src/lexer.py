@@ -112,8 +112,7 @@ class Lexer:
         start_line = self.line
         self.advance()  # Skip opening quote
         while self.current_char and self.current_char != '"':
-            if self.current_char == '\n':
-                self.line += 1
+            # Don't increment line counter here, let advance() handle it
             result += self.current_char
             self.advance()
         if not self.current_char:
