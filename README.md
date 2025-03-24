@@ -168,6 +168,4 @@ print "Fibonacci of " + x + " is " + fib(x)
 ## Summary
 This language is designed for ease of use, performance, and functional programming paradigms. It provides interactive development support with a robust REPL and ensures error-free execution through clear debugging messages and full test coverage. The syntax is designed to be simple, expressive, and efficient for both beginners and experienced developers.
 
-If you have any further suggestions or improvements, feel free to contribute!
-
 
