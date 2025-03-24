@@ -108,13 +108,23 @@ class Parser:
             token = self.consume(IDENTIFIER, "Expected an identifier")
 
             if self.peek().type == LBRACKET:
-                node = self.array_access(var_name)
-                if self.peek().type == ASSIGN:
-                    self.consume(ASSIGN, "Expected 'assign' in array assignment")
+                node = self.array_access(var_name)  # Now node is `ArrayAccess`
+                
+                if self.peek().type == ASSIGN:  # Check for assignment
+                    self.consume(ASSIGN, "Expected '=' in array assignment")
                     value = self.assignment()
-                    return ArrayAssign(node.array, node.index, value)  
+                    return ArrayAssign(node.array, node.index, value) 
+                
+                return node  
 
-                return node
+            elif self.peek().type == ASSIGN: 
+                self.consume(ASSIGN, "Expected '=' in variable assignment")
+                value = self.assignment()
+                return VarReassign(var_name, value, token)
+
+            return Var(var_name, token) 
+
+
         return self.expression_statement()
 
     def let_statement(self) -> VarAssign:
@@ -402,14 +412,13 @@ class Parser:
             return self.lambda_expression()
         if self.match(IDENTIFIER):
             ident_token = self.previous()
-            expr = Var(ident_token.value, ident_token)  # Treat as variable
+            expr = Var(ident_token.value, ident_token)
 
-            while self.match(LBRACKET):
+            while self.match(LBRACKET):  # Handle array indexing
                 index = self.expression()
                 self.consume(RBRACKET, "Expected ']' after index")
                 expr = ArrayAccess(expr, index)
-
-            return expr 
+            return expr
         if self.match(LPAREN):
             expr = self.expression()
             self.consume(RPAREN, "Expected ')' after expression")
