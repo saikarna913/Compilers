@@ -146,6 +146,22 @@ class Array(AST):
     elements: List[AST]
 
 @dataclass
+class ArrayAccess(AST):
+    """Represents accessing an array element (e.g., arr[0])"""
+    array: AST  
+    index: AST  
+    token: any = None  # Optional token for error reporting or debugging
+
+@dataclass
+class ArrayAssign(AST):
+    """Represents assigning a value to an array index (e.g., arr[1] = 5)"""
+    array: AST
+    index: AST
+    value: AST
+    token: any =None 
+
+
+@dataclass
 class Dict(AST):
     """Dictionary literal node"""
     pairs: List[Tuple[AST, AST]]  # List of (key, value) pairs
