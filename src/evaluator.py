@@ -3,7 +3,7 @@ from parser import Parser
 from ast_1 import (
     AST, BinOp, UnaryOp, Integer, Float, String, Boolean, Var, VarAssign, VarReassign, Block,
     If, While, For, RepeatUntil, Match, MatchCase, FuncDef, FuncCall, Return, Lambda,
-    Array, Dict, ConditionalExpr, Print ,ArrayAssign,ArrayAccess
+    Array, Dict, ConditionalExpr, Print, ArrayAssign, ArrayAccess
 )
 import sys
 import traceback
@@ -33,20 +33,14 @@ class Environment:
         raise FluxRuntimeError(token, f"Undefined variable '{name}'")
 
     def assign(self, name: str, value: Any, token: Token):
-        # Check if variable exists in current environment
         if name in self.variables:
             self.variables[name] = value
             return value
-        
-        # If not, check parent environments
         if self.parent:
             return self.parent.assign(name, value, token)
-        
-        # If variable doesn't exist anywhere in the chain
         raise FluxRuntimeError(token, f"Cannot reassign undefined variable '{name}'")
 
     def ancestor(self, distance: int) -> 'Environment':
-        """Get an ancestor environment at the given distance."""
         env = self
         for _ in range(distance):
             if env.parent is None:
@@ -55,13 +49,24 @@ class Environment:
         return env
 
     def get_at(self, distance: int, name: str) -> Any:
-        """Get a variable from a specific ancestor environment."""
         return self.ancestor(distance).variables.get(name)
 
     def assign_at(self, distance: int, name: str, value: Any) -> Any:
-        """Assign to a variable in a specific ancestor environment."""
         self.ancestor(distance).variables[name] = value
         return value
+
+class BuiltinFunction:
+    """Wrapper class for built-in functions"""
+    def __init__(self, func, name):
+        self.func = func
+        self.name = name
+        
+    def __str__(self):
+        return f"<built-in function {self.name}>"
+    
+    def call(self, evaluator, arguments, token):
+        # Remove the evaluator parameter since it's not needed in the builtin_len method
+        return self.func(arguments, token)  # Only pass arguments and token
 
 class TailCall(Exception):
     """Exception used for tail call optimization"""
@@ -77,7 +82,7 @@ class Return(Exception):
 class Function:
     def __init__(self, declaration, closure: Environment, is_anonymous: bool = False):
         self.declaration = declaration
-        self.closure = closure  # Capture the environment where the function was defined
+        self.closure = closure
         self.is_anonymous = is_anonymous
         self.name = '<anonymous>' if is_anonymous else declaration.name
         self.params = declaration.params
@@ -89,66 +94,76 @@ class Function:
         return f"<function {self.name}({params_str})>"
 
     def call(self, evaluator: 'Evaluator', arguments: List[Any], token: Token) -> Any:
+        if isinstance(self, BuiltinFunction):  # Handle built-in functions
+            return self.call(evaluator, arguments, token)
+            
         if len(arguments) != len(self.params):
             raise FluxRuntimeError(token, 
                 f"Expected {len(self.params)} arguments, got {len(arguments)}")
         
-        # Create a new environment with the closure as parent
         env = Environment(self.closure)
-        
-        # Bind parameters to arguments
         for param, arg in zip(self.params, arguments):
             env.define(param, arg)
         
         try:
-            # Save the previous environment and function
             prev_function = evaluator.current_function
             prev_env = evaluator.env
-            
-            # Set the new environment for evaluation
             evaluator.current_function = self
             evaluator.env = env
             
-            # For tail call optimization
             while True:
                 try:
-                    # Execute the function body in the new environment
                     result = evaluator.execute_block(self.declaration.body, env)
-                    
-                    # Reset to previous state
                     evaluator.current_function = prev_function
                     evaluator.env = prev_env
                     return result
-                    
                 except TailCall as tail_call:
-                    # Handle tail call optimization
                     if tail_call.function != self:
-                        # If the tail call is to a different function, restore state and call it
                         evaluator.current_function = prev_function
                         evaluator.env = prev_env
                         return tail_call.function.call(evaluator, tail_call.arguments, token)
                     
-                    # For recursive tail calls, just update arguments and loop again
                     if len(tail_call.arguments) != len(self.params):
                         raise FluxRuntimeError(token, 
                             f"Expected {len(self.params)} arguments, got {len(tail_call.arguments)}")
                     
-                    # Update the parameters for the next iteration
                     for param, arg in zip(self.params, tail_call.arguments):
                         env.assign(param, arg, token)
-                        
         except Return as r:
-            # Handle return statements
             evaluator.current_function = prev_function
             evaluator.env = prev_env
             return r.value
-        
+
 class Evaluator:
     def __init__(self):
         self.global_env = Environment()
         self.env = self.global_env
         self.current_function = None
         self.in_tail_position = False
+        self.add_builtins()
+
+    def add_builtins(self):
+        """Add built-in functions to the global environment"""
+        # Add len() function
+        self.global_env.define("len", BuiltinFunction(self.builtin_len, "len"))
+
+    def builtin_len(self, arguments, token):
+        """Handles len(array), len(string), and len(dict)."""
+        if len(arguments) != 1:
+            raise FluxRuntimeError(token, f"'len' expected 1 argument, got {len(arguments)}")
+        
+        arg = arguments[0]
+
+        if arg is None:
+            raise FluxRuntimeError(token, "'len' cannot be applied to 'None'")
+
+        if isinstance(arg, (list, str, dict)):
+            return len(arg)
+
+        if hasattr(arg, '__len__'):
+            return arg.__len__()
+
+        raise FluxRuntimeError(token, f"'len' expects an array, string, or dictionary, but got {type(arg).__name__}")
 
     def interpret(self, tree: Block) -> Any:
         try:
@@ -174,18 +189,14 @@ class Evaluator:
             last_idx = len(block.statements) - 1
             
             for i, stmt in enumerate(block.statements):
-                # Mark if this is the last statement for tail call optimization
                 is_last = (i == last_idx)
                 old_tail_pos = self.in_tail_position
                 
-                # Set tail position if this is the last statement and we're already in a tail position
                 if is_last:
                     self.in_tail_position = self.in_tail_position or (self.current_function is not None)
                 
-                # Handle return statements specially
                 if isinstance(stmt, Return):
                     value = self.evaluate(stmt.value)
-                    # Special case for tail recursion
                     if isinstance(stmt.value, FuncCall) and self.in_tail_position:
                         callee = self.evaluate(stmt.value.callee)
                         arguments = [self.evaluate(arg) for arg in stmt.value.args]
@@ -193,7 +204,6 @@ class Evaluator:
                             raise TailCall(callee, arguments)
                     raise Return(value)
                 
-                # Execute the statement
                 result = self.evaluate(stmt)
                 self.in_tail_position = old_tail_pos
             
@@ -317,12 +327,10 @@ class Evaluator:
         return result
 
     def visit_for(self, node: For) -> Any:
-        # Evaluate start, end, and step expressions
         start = self.evaluate(node.start)
         end = self.evaluate(node.end)
-        step = self.evaluate(node.step) if node.step else 1  # Use step if provided, else default to 1
+        step = self.evaluate(node.step) if node.step else 1
 
-        # Validate numeric values
         if not isinstance(start, (int, float)):
             raise FluxRuntimeError(Token("IDENTIFIER", node.var_name, 0), "Start value must be a number")
         if not isinstance(end, (int, float)):
@@ -332,14 +340,12 @@ class Evaluator:
         if step == 0:
             raise FluxRuntimeError(Token("IDENTIFIER", node.var_name, 0), "Step cannot be zero")
 
-        # Create a new environment for the loop
         loop_env = Environment(self.env)
         loop_env.define(node.var_name, start)
         
         result = None
         current = start
         
-        # Loop condition depends on step direction
         while (step > 0 and current <= end) or (step < 0 and current >= end):
             body_env = Environment(loop_env)
             result = self.execute_block(node.body, body_env)
@@ -368,8 +374,6 @@ class Evaluator:
         return self.evaluate(node.body)
 
     def visit_lambda(self, node: Lambda) -> Any:
-        """Create an anonymous function"""
-        # Create a FuncDef-like object for the anonymous function
         lambda_def = type('AnonymousFunc', (), {
             'params': node.params,
             'body': node.body,
@@ -385,34 +389,26 @@ class Evaluator:
     def visit_func_call(self, node: FuncCall) -> Any:
         callee = self.evaluate(node.callee)
         
-        # Make sure callee is a function
-        if not isinstance(callee, Function):
+        if not isinstance(callee, (Function, BuiltinFunction)):
             raise FluxRuntimeError(
                 node.token or Token("IDENTIFIER", str(node.callee), 0), 
                 f"Can only call functions, got: {type(callee).__name__}"
             )
         
-        # Evaluate the arguments
         arguments = [self.evaluate(arg) for arg in node.args]
         
-        # Check if this is a tail call to the current function
-        if self.in_tail_position and self.current_function is callee:
+        if self.in_tail_position and isinstance(callee, Function) and callee == self.current_function:
             raise TailCall(callee, arguments)
         
-        # Otherwise do a regular call
         return callee.call(self, arguments, node.token or Token("IDENTIFIER", "function call", 0))
 
     def visit_return(self, node: Return) -> Any:
-        # Save the current tail position state
         was_tail = self.in_tail_position
-        
-        # Mark as tail position for any function call in the return expression
         self.in_tail_position = self.current_function is not None
         
         try:
             value = self.evaluate(node.value)
             
-            # Handle tail call optimization directly in return statements
             if isinstance(node.value, FuncCall) and self.in_tail_position:
                 callee = self.evaluate(node.value.callee)
                 arguments = [self.evaluate(arg) for arg in node.value.args]
@@ -420,26 +416,18 @@ class Evaluator:
                 if isinstance(callee, Function) and callee == self.current_function:
                     raise TailCall(callee, arguments)
             
-            # Regular return
             raise Return(value)
         finally:
-            # Restore the previous tail position state
             self.in_tail_position = was_tail
 
     def visit_array(self, node: Array) -> List[Any]:
-        """Evaluates an array declaration and returns a list of evaluated elements."""
         return [self.evaluate(element) for element in node.elements]
 
     def visit_array_assign(self, node: ArrayAssign) -> Any:
-        """Handles array element assignment like arr[1] = 5"""
-        if isinstance(node.array, str):  # If node.array is already a string, use it directly
-            array_name = node.array
-        else:
-            array_name = node.array.name  # Get the variable name if it's an AST node
-
-        array = self.env.get(array_name, node.token)  # Retrieve array from environment
-        index = self.evaluate(node.index)  # Evaluate index expression
-        value = self.evaluate(node.value)  # Evaluate value expression
+        array_name = node.array if isinstance(node.array, str) else node.array.name
+        array = self.env.get(array_name, node.token)
+        index = self.evaluate(node.index)
+        value = self.evaluate(node.value)
 
         if not isinstance(array, list):
             raise FluxRuntimeError(node.token, f"Cannot assign to non-array type: {type(array).__name__}")
@@ -448,17 +436,14 @@ class Evaluator:
         if index < 0 or index >= len(array):
             raise FluxRuntimeError(node.token, f"Array index {index} out of bounds")
 
-        # Perform assignment
         array[index] = value
-        self.env.assign(array_name, array, node.token)  # Store modified array back
-
+        self.env.assign(array_name, array, node.token)
         return value
     
     def visit_array_access(self, node: ArrayAccess) -> Any:
-        """Handles array indexing like arr[1]"""
-        array_name = node.array if isinstance(node.array, str) else node.array.name  # Fix potential issue
-        array = self.env.get(array_name, node.token)  # Retrieve array from environment
-        index = self.evaluate(node.index)  # Evaluate index expression
+        array_name = node.array if isinstance(node.array, str) else node.array.name
+        array = self.env.get(array_name, node.token)
+        index = self.evaluate(node.index)
 
         if not isinstance(array, list):
             raise FluxRuntimeError(node.token, f"Cannot index non-array type: {type(array).__name__}")
@@ -468,7 +453,6 @@ class Evaluator:
             raise FluxRuntimeError(node.token, f"Array index {index} out of bounds")
 
         return array[index]
-
 
     def visit_dict(self, node: Dict) -> Dict[Any, Any]:
         return {self.evaluate(k): self.evaluate(v) for k, v in node.pairs}
@@ -496,9 +480,9 @@ class Evaluator:
         if value is None or value is False:
             return False
         if isinstance(value, (int, float)) and value == 0:
-            return False  # Treating 0 as falsy
+            return False
         if isinstance(value, str) and value == "":
-            return False  # Empty string is falsy
+            return False
         return True
 
     def stringify(self, value: Any) -> str:
@@ -506,7 +490,7 @@ class Evaluator:
             return "nil"
         if isinstance(value, float) and value.is_integer():
             return str(int(value))
-        if isinstance(value, Function):
+        if isinstance(value, (Function, BuiltinFunction)):
             return str(value)
         return str(value)
 
