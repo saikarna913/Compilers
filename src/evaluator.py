@@ -7,6 +7,7 @@ from ast_1 import (
 )
 import sys
 import traceback
+import re
 from typing import Any, Dict, List, Optional
 
 class FluxRuntimeError(Exception):
@@ -40,7 +41,9 @@ class Environment:
 
 class TailCall(Exception):
     """Exception used for tail call optimization"""
-    pass
+    def __init__(self, function, arguments):
+        self.function = function
+        self.arguments = arguments
 
 class Return(Exception):
     def __init__(self, value: Any):
@@ -48,7 +51,7 @@ class Return(Exception):
         super().__init__()
 
 class Function:
-    def __init__(self, declaration, closure: 'Environment', is_anonymous: bool = False):
+    def __init__(self, declaration, closure: Environment, is_anonymous: bool = False):
         self.declaration = declaration
         self.closure = closure
         self.is_anonymous = is_anonymous
@@ -62,7 +65,6 @@ class Function:
         return f"<function {self.name}({params_str})>"
 
     def call(self, evaluator: 'Evaluator', arguments: List[Any], token: Token) -> Any:
-        # Ensure we have the right number of arguments
         if len(arguments) != len(self.params):
             raise FluxRuntimeError(token, 
                 f"Expected {len(self.params)} arguments, got {len(arguments)}")
@@ -75,11 +77,41 @@ class Function:
             env.define(param, arg)
         
         try:
-            # Execute the function body in the new environment
-            result = evaluator.execute_block(self.declaration.body, env)
-            return result
+            # Save previous function for proper nesting
+            prev_function = evaluator.current_function
+            prev_env = evaluator.env
+            evaluator.current_function = self
+            evaluator.env = env
+            
+            # For tail call optimization
+            while True:
+                try:
+                    # Execute the function body in the new environment
+                    result = evaluator.execute_block(self.declaration.body, env)
+                    evaluator.current_function = prev_function
+                    evaluator.env = prev_env
+                    return result
+                except TailCall as tail_call:
+                    # Reset environment for a new call
+                    if tail_call.function != self:
+                        evaluator.current_function = prev_function
+                        evaluator.env = prev_env
+                        return tail_call.function.call(evaluator, tail_call.arguments, token)
+                    
+                    # Reuse the same stack frame for tail recursion
+                    # Just update the arguments and loop again
+                    if len(tail_call.arguments) != len(self.params):
+                        raise FluxRuntimeError(token, 
+                            f"Expected {len(self.params)} arguments, got {len(tail_call.arguments)}")
+                    
+                    # Update parameters
+                    for param, arg in zip(self.params, tail_call.arguments):
+                        env.assign(param, arg, token)
+                        
         except Return as r:
-            # Handle return statements
+            # Reset after return
+            evaluator.current_function = prev_function
+            evaluator.env = prev_env
             return r.value
 
 class Evaluator:
@@ -88,7 +120,6 @@ class Evaluator:
         self.env = self.global_env
         self.current_function = None
         self.in_tail_position = False
-        self.tail_call_args = None
 
     def interpret(self, tree: Block) -> Any:
         try:
@@ -111,44 +142,35 @@ class Evaluator:
         self.env = env
         try:
             result = None
-            for stmt in block.statements:
+            last_idx = len(block.statements) - 1
+            
+            for i, stmt in enumerate(block.statements):
+                # Mark if this is the last statement for tail call optimization
+                is_last = (i == last_idx)
+                old_tail_pos = self.in_tail_position
+                
+                # Set tail position if this is the last statement and we're already in a tail position
+                if is_last:
+                    self.in_tail_position = self.in_tail_position or (self.current_function is not None)
+                
+                # Handle return statements specially
                 if isinstance(stmt, Return):
-                    raise Return(self.evaluate(stmt.value))
+                    value = self.evaluate(stmt.value)
+                    # Special case for tail recursion
+                    if isinstance(stmt.value, FuncCall) and self.in_tail_position:
+                        callee = self.evaluate(stmt.value.callee)
+                        arguments = [self.evaluate(arg) for arg in stmt.value.args]
+                        if isinstance(callee, Function) and callee == self.current_function:
+                            raise TailCall(callee, arguments)
+                    raise Return(value)
+                
+                # Execute the statement
                 result = self.evaluate(stmt)
+                self.in_tail_position = old_tail_pos
+            
             return result
         finally:
             self.env = previous_env
-
-    # Special method for handling tail-recursive calls
-    def evaluate_tail_recursive(self, node: FuncCall) -> Any:
-        """Special evaluation method for potentially tail-recursive functions"""
-        # Evaluate the callee and arguments
-        callee = self.evaluate(node.callee)
-        
-        if not isinstance(callee, Function):
-            raise FluxRuntimeError(
-                node.token or Token("IDENTIFIER", str(node.callee), 0), 
-                f"'{node.callee}' is not a function"
-            )
-            
-        # Mark that we're in a tail position
-        self.in_tail_position = True
-        self.current_function = callee
-        
-        # Initial set of arguments
-        arguments = [self.evaluate(arg) for arg in node.args]
-        
-        # Loop instead of recursing
-        while True:
-            try:
-                # Call the function with current arguments
-                result = callee.call(self, arguments, node.token or Token("IDENTIFIER", str(node.callee), 0))
-                return result
-            except TailCall:
-                # Update arguments for the next iteration
-                arguments = self.tail_call_args
-                self.tail_call_args = None
-                # Continue looping (which reuses the stack frame)
 
     def visit_integer(self, node: Integer) -> Any:
         return node.value
@@ -342,26 +364,31 @@ class Evaluator:
             )
         
         # Evaluate the arguments
-        arguments = []
-        for arg in node.args:
-            arguments.append(self.evaluate(arg))
+        arguments = [self.evaluate(arg) for arg in node.args]
         
-        # Call the function with the evaluated arguments
+        # Check if this is a tail call to the current function
+        if self.in_tail_position and self.current_function is callee:
+            raise TailCall(callee, arguments)
+        
+        # Otherwise do a regular call
         return callee.call(self, arguments, node.token or Token("IDENTIFIER", "function call", 0))
 
     def visit_return(self, node: Return) -> Any:
-        value = self.evaluate(node.value)
+        # Save the current tail position state
+        was_tail = self.in_tail_position
         
-        # Check if this return contains a function call that could be tail-optimized
-        if isinstance(node.value, FuncCall) and self.current_function:
-            self.in_tail_position = True
-            try:
-                value = self.evaluate_tail_recursive(node.value)
-            except TailCall:
-                pass  # This shouldn't happen, but just in case
+        # Mark as tail position for any function call in the return expression
+        self.in_tail_position = self.current_function is not None
         
-        # Propagate the return value
-        raise Return(value)
+        try:
+            value = self.evaluate(node.value)
+            return value
+        except TailCall as tc:
+            # If we caught a TailCall, re-raise it to be handled by the function
+            raise
+        finally:
+            # Restore the previous tail position state
+            self.in_tail_position = was_tail
 
     def visit_array(self, node: Array) -> List[Any]:
         return [self.evaluate(elem) for elem in node.elements]
@@ -393,6 +420,8 @@ class Evaluator:
             return False
         if isinstance(value, (int, float)) and value == 0:
             return False  # Treating 0 as falsy
+        if isinstance(value, str) and value == "":
+            return False  # Empty string is falsy
         return True
 
     def stringify(self, value: Any) -> str:
@@ -426,7 +455,4 @@ if __name__ == "__main__":
         print("Usage: python evaluator.py <filename.fs>")
         sys.exit(1)
     filename = sys.argv[1]
-    if not filename.endswith('.fs'):
-        print("Error: File must have a .fs extension.")
-        sys.exit(1)
     run_file(filename)
