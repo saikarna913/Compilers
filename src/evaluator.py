@@ -3,7 +3,7 @@ from parser import Parser
 from ast_1 import (
     AST, BinOp, UnaryOp, Integer, Float, String, Boolean, Var, VarAssign, VarReassign, Block,
     If, While, For, RepeatUntil, Match, MatchCase, FuncDef, FuncCall, Return, Lambda,
-    Array, Dict, ConditionalExpr, Print
+    Array, Dict, ConditionalExpr, Print,ArrayAssign,ArrayAccess
 )
 import sys
 import traceback
@@ -49,7 +49,6 @@ class Return(Exception):
     def __init__(self, value: Any):
         self.value = value
         super().__init__()
-
 class Function:
     def __init__(self, declaration, closure: Environment, is_anonymous: bool = False):
         self.declaration = declaration
@@ -113,7 +112,6 @@ class Function:
             evaluator.current_function = prev_function
             evaluator.env = prev_env
             return r.value
-
 class Evaluator:
     def __init__(self):
         self.global_env = Environment()
@@ -186,6 +184,7 @@ class Evaluator:
 
     def visit_var(self, node: Var) -> Any:
         return self.env.get(node.name, node.token)
+    
 
     def visit_var_assign(self, node: VarAssign) -> Any:
         value = self.evaluate(node.value)
@@ -348,15 +347,19 @@ class Evaluator:
         })
         return Function(lambda_def, self.env, is_anonymous=True)
 
-    def visit_func_def(self, node: FuncDef) -> None:
+    def visit_func_def(self, node: FuncDef) -> Function:
+        # Capture the defining environment for lexical scoping (closures)
         func = Function(node, self.env)
+        
+        # Allow recursion by binding the function name in the current environment
         self.env.define(node.name, func)
-        return func
+        
+        return func  # Ensure the function object is returned
 
     def visit_func_call(self, node: FuncCall) -> Any:
         callee = self.evaluate(node.callee)
         
-        # Make sure callee is a function
+        # Ensure callee is actually a function
         if not isinstance(callee, Function):
             raise FluxRuntimeError(
                 node.token or Token("IDENTIFIER", str(node.callee), 0), 
@@ -365,12 +368,12 @@ class Evaluator:
         
         # Evaluate the arguments
         arguments = [self.evaluate(arg) for arg in node.args]
-        
-        # Check if this is a tail call to the current function
+
+        # Tail Call Optimization (TCO) handling
         if self.in_tail_position and self.current_function is callee:
             raise TailCall(callee, arguments)
         
-        # Otherwise do a regular call
+        # Proper function call with lexical scoping
         return callee.call(self, arguments, node.token or Token("IDENTIFIER", "function call", 0))
 
     def visit_return(self, node: Return) -> Any:
@@ -391,7 +394,50 @@ class Evaluator:
             self.in_tail_position = was_tail
 
     def visit_array(self, node: Array) -> List[Any]:
-        return [self.evaluate(elem) for elem in node.elements]
+        """Evaluates an array declaration and returns a list of evaluated elements."""
+        return [self.evaluate(element) for element in node.elements]
+
+    def visit_array_assign(self, node: ArrayAssign) -> Any:
+        """Handles array element assignment like arr[1] = 5"""
+        if isinstance(node.array, str):  # If node.array is already a string, use it directly
+            array_name = node.array
+        else:
+            array_name = node.array.name  # Get the variable name if it's an AST node
+
+        array = self.env.get(array_name, node.token)  # Retrieve array from environment
+        index = self.evaluate(node.index)  # Evaluate index expression
+        value = self.evaluate(node.value)  # Evaluate value expression
+
+        if not isinstance(array, list):
+            raise FluxRuntimeError(node.token, f"Cannot assign to non-array type: {type(array).__name__}")
+        if not isinstance(index, int):
+            raise FluxRuntimeError(node.token, f"Array index must be an integer, got {type(index).__name__}")
+        if index < 0 or index >= len(array):
+            raise FluxRuntimeError(node.token, f"Array index {index} out of bounds")
+
+        # Perform assignment
+        array[index] = value
+        self.env.assign(array_name, array, node.token)  # Store modified array back
+
+        return value
+    
+    def visit_array_access(self, node: ArrayAccess) -> Any:
+        """Handles array indexing like arr[1]"""
+        array_name = node.array if isinstance(node.array, str) else node.array.name  # Fix potential issue
+        array = self.env.get(array_name, node.token)  # Retrieve array from environment
+        index = self.evaluate(node.index)  # Evaluate index expression
+
+        if not isinstance(array, list):
+            raise FluxRuntimeError(node.token, f"Cannot index non-array type: {type(array).__name__}")
+        if not isinstance(index, int):
+            raise FluxRuntimeError(node.token, f"Array index must be an integer, got {type(index).__name__}")
+        if index < 0 or index >= len(array):
+            raise FluxRuntimeError(node.token, f"Array index {index} out of bounds")
+
+        return array[index]
+
+
+
 
     def visit_dict(self, node: Dict) -> Dict[Any, Any]:
         return {self.evaluate(k): self.evaluate(v) for k, v in node.pairs}
@@ -442,8 +488,8 @@ def run_file(filename: str):
         parser = Parser(lexer)
         tree = parser.parse()
         result = evaluator.interpret(tree)
-        if result is not None:
-            print(f"Final result: {evaluator.stringify(result)}")
+        #if result is not None:
+            #print(f"Final result: {evaluator.stringify(result)}")
     except FileNotFoundError:
         print(f"Error: File '{filename}' not found.")
     except Exception as e:
