@@ -427,7 +427,48 @@ class Evaluator:
             self.in_tail_position = was_tail
 
     def visit_array(self, node: Array) -> List[Any]:
-        return [self.evaluate(elem) for elem in node.elements]
+        """Evaluates an array declaration and returns a list of evaluated elements."""
+        return [self.evaluate(element) for element in node.elements]
+
+    def visit_array_assign(self, node: ArrayAssign) -> Any:
+        """Handles array element assignment like arr[1] = 5"""
+        if isinstance(node.array, str):  # If node.array is already a string, use it directly
+            array_name = node.array
+        else:
+            array_name = node.array.name  # Get the variable name if it's an AST node
+
+        array = self.env.get(array_name, node.token)  # Retrieve array from environment
+        index = self.evaluate(node.index)  # Evaluate index expression
+        value = self.evaluate(node.value)  # Evaluate value expression
+
+        if not isinstance(array, list):
+            raise FluxRuntimeError(node.token, f"Cannot assign to non-array type: {type(array).__name__}")
+        if not isinstance(index, int):
+            raise FluxRuntimeError(node.token, f"Array index must be an integer, got {type(index).__name__}")
+        if index < 0 or index >= len(array):
+            raise FluxRuntimeError(node.token, f"Array index {index} out of bounds")
+
+        # Perform assignment
+        array[index] = value
+        self.env.assign(array_name, array, node.token)  # Store modified array back
+
+        return value
+    
+    def visit_array_access(self, node: ArrayAccess) -> Any:
+        """Handles array indexing like arr[1]"""
+        array_name = node.array if isinstance(node.array, str) else node.array.name  # Fix potential issue
+        array = self.env.get(array_name, node.token)  # Retrieve array from environment
+        index = self.evaluate(node.index)  # Evaluate index expression
+
+        if not isinstance(array, list):
+            raise FluxRuntimeError(node.token, f"Cannot index non-array type: {type(array).__name__}")
+        if not isinstance(index, int):
+            raise FluxRuntimeError(node.token, f"Array index must be an integer, got {type(index).__name__}")
+        if index < 0 or index >= len(array):
+            raise FluxRuntimeError(node.token, f"Array index {index} out of bounds")
+
+        return array[index]
+
 
     def visit_dict(self, node: Dict) -> Dict[Any, Any]:
         return {self.evaluate(k): self.evaluate(v) for k, v in node.pairs}
