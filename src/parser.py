@@ -4,7 +4,7 @@ from lexer import (Lexer, Token, LET, IF, WHILE, FOR, FUNC, RETURN, PRINT, ELSE,
                   IDENTIFIER, INTEGER, FLOAT, STRING, TRUE, FALSE, EOF, TO, IN, REPEAT, UNTIL, MATCH, ARROW, QUESTION_MARK, STEP)
 from ast_1 import (AST, BinOp, UnaryOp, Integer, Float, String, Boolean, Var, VarAssign, VarReassign, Block,
                   If, While, For, FuncDef, Return, FuncCall, Print, Array, Dict, ConditionalExpr,
-                  RepeatUntil, Match, MatchCase, AstPrinter, Lambda)
+                  RepeatUntil, Match, MatchCase, AstPrinter, Lambda,ArrayAccess,ArrayAssign)
 
 class ParseError(Exception):
     pass
@@ -103,6 +103,18 @@ class Parser:
             return self.return_statement()
         if self.peek().type == PRINT:
             return self.print_statement()
+        if self.peek().type == IDENTIFIER:
+            var_name = self.peek().value
+            token = self.consume(IDENTIFIER, "Expected an identifier")
+
+            if self.peek().type == LBRACKET:
+                node = self.array_access(var_name)
+                if self.peek().type == ASSIGN:
+                    self.consume(ASSIGN, "Expected 'assign' in array assignment")
+                    value = self.assignment()
+                    return ArrayAssign(node.array, node.index, value)  
+
+                return node
         return self.expression_statement()
 
     def let_statement(self) -> VarAssign:
@@ -205,6 +217,26 @@ class Parser:
         self.advance()  # Consume 'print'
         expr = self.expression()
         return Print(expr)
+    
+    def array_literal(self):
+        """Parse array literals like [1, 2, 3]"""
+        elements = []
+        self.consume(LBRACKET, "Expected '[' to start array")
+
+        if self.peek().type != RBRACKET:  # If not an empty array
+            elements.append(self.assignment())
+            while self.match(COMMA):
+                elements.append(self.assignment())
+
+        self.consume(RBRACKET, "Expected ']' after array elements")
+        return Array(elements)
+    
+    def array_access(self, var_name):
+        """Parse array indexing like arr[0]"""
+        self.consume(LBRACKET, "Expected '[' after array name")
+        index = self.assignment()
+        self.consume(RBRACKET, "Expected ']' after array index")
+        return ArrayAccess(var_name, index) 
 
     def block(self) -> Block:
         self.consume(LBRACE, "Expected '{' to start block")
@@ -370,7 +402,14 @@ class Parser:
             return self.lambda_expression()
         if self.match(IDENTIFIER):
             ident_token = self.previous()
-            return Var(ident_token.value, ident_token)
+            expr = Var(ident_token.value, ident_token)  # Treat as variable
+
+            while self.match(LBRACKET):
+                index = self.expression()
+                self.consume(RBRACKET, "Expected ']' after index")
+                expr = ArrayAccess(expr, index)
+
+            return expr 
         if self.match(LPAREN):
             expr = self.expression()
             self.consume(RPAREN, "Expected ')' after expression")
