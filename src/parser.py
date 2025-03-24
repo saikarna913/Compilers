@@ -82,6 +82,7 @@ class Parser:
                     statements.append(stmt)
             except ParseError:
                 self.synchronize()
+        print(statements)
         return Block(statements)
 
     def statement(self) -> AST:
@@ -247,6 +248,15 @@ class Parser:
         index = self.assignment()
         self.consume(RBRACKET, "Expected ']' after array index")
         return ArrayAccess(var_name, index) 
+    
+    def len_expression(self):
+        token = self.previous()  # Store 'len' token
+        self.consume(LPAREN, "Expected '(' after 'len'")
+        expr = self.expression()
+        self.consume(RPAREN, "Expected ')' after expression")
+        
+        return FuncCall(Var("len", token), [expr], token=token)
+
 
     def block(self) -> Block:
         self.consume(LBRACE, "Expected '{' to start block")
@@ -412,6 +422,8 @@ class Parser:
             return self.lambda_expression()
         if self.match(IDENTIFIER):
             ident_token = self.previous()
+            if ident_token.value == "len" and self.peek().type == LPAREN:
+                return self.len_expression()
             expr = Var(ident_token.value, ident_token)
 
             while self.match(LBRACKET):  # Handle array indexing
@@ -452,8 +464,10 @@ class Parser:
 
 def parse_code(code: str) -> Block:
     lexer = Lexer(code)
+    print(lexer)
     parser = Parser(lexer)
     ast = parser.parse()
+   #print(ast)
     printer = AstPrinter()
     print(printer.print(ast))
     return ast
