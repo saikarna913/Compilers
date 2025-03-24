@@ -3,7 +3,7 @@ from parser import Parser
 from ast_1 import (
     AST, BinOp, UnaryOp, Integer, Float, String, Boolean, Var, VarAssign, VarReassign, Block,
     If, While, For, RepeatUntil, Match, MatchCase, FuncDef, FuncCall, Return, Lambda,
-    Array, Dict, ConditionalExpr, Print
+    Array, Dict, ConditionalExpr, Print ,ArrayAssign,ArrayAccess
 )
 import sys
 import traceback
