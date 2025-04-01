@@ -8,7 +8,7 @@ This language is designed to be high-level (Python-like), dynamically typed, and
 ---
 
 ### Data Types
-The language supports a minimal yet expressive set of built-in data types, extensible via user-defined types (a DESIRABLE feature).
+The language supports a minimal yet expressive set of built-in data types.
 
 #### Primitive Data Types
 - **Numbers**: Integers or floating-point values in decimal notation.
