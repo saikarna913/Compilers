@@ -1,8 +1,8 @@
 # FluxScript
 
 ## Introduction
+
 **FluxScript (.fs)** is a high-level, dynamically typed, functional programming language designed for competitive programming and AI scripting. It prioritizes usability, expressive power, and functional programming principles like immutability where practical. With a robust REPL, FluxScript supports interactive development, making it perfect for rapid prototyping and experimentation.
----
 
 ## Language Design
 ### Design Choices
