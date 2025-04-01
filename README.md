@@ -21,7 +21,6 @@ The language supports a minimal yet expressive set of built-in data types.
   - Examples: `[1, 2, 3]`, `["a", 2, True]`
 - **Dictionaries**: Key-value mappings enclosed in curly braces.
   - Examples: `{ "key": 42, "flag": True }`
-
 ---
 
 ### Variables
@@ -39,7 +38,7 @@ Variables are dynamically typed and lexically scoped. They are declared with `le
 
 #### Arithmetic Operators
 Supported operators follow standard mathematical precedence:
-- `+` (addition), `-` (subtraction), `*` (multiplication), `/` (division), `**` (exponentiation), `rem` (remainder), `quot` (integer division)
+- `+` (addition), `-` (subtraction), `*` (multiplication), `/` (division), `**` (exponentiation), `rem` (remainder)
 - Example: `10 + 5 * 2` evaluates to `20` (multiplication precedes addition).
 - Precedence: `()` > `**` (right-associative) > `* / rem` (left-associative) > `+ -` (left-associative)
 
@@ -178,4 +177,3 @@ print "Fibonacci of " + x + " is " + fib(x)
 ```
 
 ---
-
