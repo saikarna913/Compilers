@@ -4,30 +4,12 @@ Welcome to FluxScript, a high-level, dynamically typed, functional programming l
 
 ## Installation
 
-1. **Clone the Repository**  
+**Clone the Repository**  
    Clone the project to your local machine:
    ```bash
-   git clone https://your-repository-url.git
+   git clone https://github.com/AtalGupta/Compilers.git
    cd Compilers
    ```
-
-2. **Python Requirements**  
-   FluxScript is implemented in Python. Ensure you have Python 3.8 (or later) installed:
-   ```bash
-   python --version
-   ```
-   If Python is not installed, download and install it from [python.org](https://www.python.org/).
-
-3. **Configure PYTHONPATH (if needed)**  
-   To allow Python to locate the `src` modules, set your PYTHONPATH environment variable to the project root.
-   - On **Windows** (Command Prompt):
-     ```cmd
-     set PYTHONPATH=%CD%
-     ```
-   - On **Linux/Mac**:
-     ```bash
-     export PYTHONPATH=$(pwd)
-     ```
 
 ## Running FluxScript
 
