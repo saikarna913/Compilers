@@ -57,11 +57,6 @@ FluxScript’s documentation is crafted for accessibility:
 ### Codebase Coverage
 - **Aim 100% Coverage**: Every line of code is tested, ensuring robustness and correctness.
 
-## Teamwork
-### Work Distribution
-- **Collaborative Effort**: Tasks were assigned based on team members strengths
-- **Even Contribution**: Regular meetings kept the team aligned, with all members contributing equally.
-
 ---
 
 ### Code Demonstration 
