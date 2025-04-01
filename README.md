@@ -19,8 +19,6 @@ The language supports a minimal yet expressive set of built-in data types, exten
   - Examples: `"Hello, world!"`, `""`
 - **Arrays**: Ordered, mutable collections enclosed in square brackets.
   - Examples: `[1, 2, 3]`, `["a", 2, True]`
-
-#### DESIRABLE Data Types
 - **Dictionaries**: Key-value mappings enclosed in curly braces.
   - Examples: `{ "key": 42, "flag": True }`
 
