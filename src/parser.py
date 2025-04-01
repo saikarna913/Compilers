@@ -1,8 +1,8 @@
-from lexer import (Lexer, Token, LET, IF, WHILE, FOR, FUNC, RETURN, PRINT, ELSE, ASSIGN, EQUALS,
-                  PLUS, MINUS, MULTIPLY, DIVIDE, EXPONENT, REM, QUOT, LPAREN, RPAREN, LBRACE, RBRACE,
+from src.lexer import (Lexer, Token, LET, IF, WHILE, FOR, FUNC, RETURN, PRINT, ELSE, ASSIGN, EQUALS,
+                  PLUS, MINUS, MULTIPLY, DIVIDE, EXPONENT, REM, LPAREN, RPAREN, LBRACE, RBRACE,
                   LT, GT, LTE, GTE, EQEQ, NOTEQ, AND, OR, NOT, COMMA, LBRACKET, RBRACKET, COLON,
                   IDENTIFIER, INTEGER, FLOAT, STRING, TRUE, FALSE, EOF, TO, IN, REPEAT, UNTIL, MATCH, ARROW, QUESTION_MARK, STEP)
-from ast_1 import (AST, BinOp, UnaryOp, Integer, Float, String, Boolean, Var, VarAssign, VarReassign, Block,
+from src.ast_1 import (AST, BinOp, UnaryOp, Integer, Float, String, Boolean, Var, VarAssign, VarReassign, Block,
                   If, While, For, FuncDef, Return, FuncCall, Print, Array, Dict, ConditionalExpr,
                   RepeatUntil, Match, MatchCase, AstPrinter, Lambda,ArrayAccess,ArrayAssign)
 
@@ -75,14 +75,14 @@ class Parser:
 
     def parse(self) -> Block:
         statements = []
-        while self.peek().type != EOF:
+        while not self.is_at_end():  # Changed from peek().type != EOF
             try:
                 stmt = self.statement()
                 if stmt:
                     statements.append(stmt)
-            except ParseError:
+            except ParseError as e:
+                print(str(e))
                 self.synchronize()
-        print(statements)
         return Block(statements)
 
     def statement(self) -> AST:
@@ -109,24 +109,19 @@ class Parser:
             token = self.consume(IDENTIFIER, "Expected an identifier")
 
             if self.peek().type == LBRACKET:
-                node = self.array_access(var_name)  # Now node is `ArrayAccess`
-                
-                if self.peek().type == ASSIGN:  # Check for assignment
-                    self.consume(ASSIGN, "Expected '=' in array assignment")
+                node = self.array_access(Var(var_name, token))  # Pass Var node instead of string
+                if self.peek().type == EQUALS:
+                    self.consume(EQUALS, "Expected '=' in array assignment")
                     value = self.assignment()
-                    return ArrayAssign(node.array, node.index, value) 
-                
-                return node  
-
-            elif self.peek().type == ASSIGN: 
+                    return ArrayAssign(node.array, node.index, value)
+                return node
+            elif self.peek().type == ASSIGN:
                 self.consume(ASSIGN, "Expected '=' in variable assignment")
                 value = self.assignment()
                 return VarReassign(var_name, value, token)
-
-            return Var(var_name, token) 
-
-
+            return Var(var_name, token)
         return self.expression_statement()
+
 
     def let_statement(self) -> VarAssign:
         self.advance()  # Consume 'let'
@@ -156,31 +151,25 @@ class Parser:
         return While(condition, body)
 
     def for_statement(self) -> For:
-        self.advance()  # Consume 'for'
+        token = self.advance()  # Consume 'for'
         self.consume(LPAREN, "Expected '(' after 'for'")
         
-        # Parse the variable declaration
         self.consume(LET, "Expected 'let' after 'for ('")
         name_token = self.consume(IDENTIFIER, "Expected variable name")
-        self.consume(EQUALS, "Expected '=' after variable name")
+        self.consume(ASSIGN, "Expected '=' after variable name")
         start = self.expression()
         
-        # Parse the 'to' keyword and end expression
         self.consume(TO, "Expected 'to' after start expression")
         end = self.expression()
         
-        # Handle optional step parameter
         step = None
         if self.match(STEP):
             step = self.expression()
         
-        # Consume the closing parenthesis
         self.consume(RPAREN, "Expected ')' after for loop header")
-        
-        # Parse the body
         body = self.block()
         
-        return For(name_token.value, start, end, body, step)
+        return For(name_token.value, start, end, body, step, token=token)
 
     def repeat_statement(self) -> RepeatUntil:
         self.advance()  # Consume 'repeat'
@@ -242,12 +231,11 @@ class Parser:
         self.consume(RBRACKET, "Expected ']' after array elements")
         return Array(elements)
     
-    def array_access(self, var_name):
-        """Parse array indexing like arr[0]"""
+    def array_access(self, array):  # Change parameter to accept AST node
         self.consume(LBRACKET, "Expected '[' after array name")
         index = self.assignment()
         self.consume(RBRACKET, "Expected ']' after array index")
-        return ArrayAccess(var_name, index) 
+        return ArrayAccess(array, index)
     
     def len_expression(self):
         token = self.previous()  # Store 'len' token
@@ -331,7 +319,7 @@ class Parser:
             else_expr = self.conditional()
             return ConditionalExpr(expr, then_expr, else_expr)
         return expr
-
+    
     def logic_or(self) -> AST:
         expr = self.logic_and()
         while self.match(OR):
@@ -374,7 +362,7 @@ class Parser:
 
     def factor(self) -> AST:
         expr = self.power()
-        while self.match(MULTIPLY, DIVIDE, REM, QUOT):
+        while self.match(MULTIPLY, DIVIDE, REM):
             op = self.previous()
             right = self.power()
             expr = BinOp(expr, op, right)

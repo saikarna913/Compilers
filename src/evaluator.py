@@ -1,6 +1,6 @@
-from lexer import Lexer, Token, PLUS, MINUS, MULTIPLY, DIVIDE, EXPONENT, REM, QUOT, LT, GT, LTE, GTE, EQEQ, NOTEQ, AND, OR, NOT
-from parser import Parser
-from ast_1 import (
+from src.lexer import Lexer, Token, PLUS, MINUS, MULTIPLY, DIVIDE, EXPONENT, REM, LT, GT, LTE, GTE, EQEQ, NOTEQ, AND, OR, NOT
+from src.parser import Parser
+from src.ast_1 import (
     AST, BinOp, UnaryOp, Integer, Float, String, Boolean, Var, VarAssign, VarReassign, Block,
     If, While, For, RepeatUntil, Match, MatchCase, FuncDef, FuncCall, Return, Lambda,
     Array, Dict, ConditionalExpr, Print, ArrayAssign, ArrayAccess
@@ -275,11 +275,6 @@ class Evaluator:
                 raise FluxRuntimeError(node.operator, "Remainder by zero")
             return left % right
         
-        if op_type == QUOT:
-            self.check_number_operands(node.operator, left, right)
-            if right == 0:
-                raise FluxRuntimeError(node.operator, "Integer division by zero")
-            return left // right
         
         if op_type in (LT, GT, LTE, GTE):
             self.check_number_operands(node.operator, left, right)

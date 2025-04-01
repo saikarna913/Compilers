@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Union, Optional, List, Tuple, Any
-from lexer import Token  # Import Token for operator and identifier nodes
+from src.lexer import Token  # Import Token for operator and identifier nodes
 import re
 
 @dataclass
@@ -156,7 +156,7 @@ class ArrayAssign(AST):
     array: AST
     index: AST
     value: AST
-    token: any =None 
+    token: any = None 
     
 @dataclass
 class Dict(AST):
@@ -199,6 +199,8 @@ class Visitor:
     def visit_lambda(self, node: Lambda) -> Any: pass
     def visit_return(self, node: Return) -> Any: pass
     def visit_array(self, node: Array) -> Any: pass
+    def visit_array_access(self, node: ArrayAccess) -> Any: pass
+    def visit_array_assign(self, node: ArrayAssign) -> Any: pass
     def visit_dict(self, node: Dict) -> Any: pass
     def visit_conditional_expr(self, node: ConditionalExpr) -> Any: pass
     def visit_print(self, node: Print) -> Any: pass
@@ -261,11 +263,8 @@ class AstPrinter(Visitor):
         return self.parenthesize("repeat-until", node.body, node.condition)
 
     def visit_match(self, node: Match) -> str:
-        # Get the expression string
         expr_str = node.expression.accept(self)
-        # Get case strings
         case_strings = [case.accept(self) for case in node.cases]
-        # Join cases into a single string
         cases_str = " ".join(case_strings)
         return f"(match {expr_str} {cases_str})"
 
@@ -290,10 +289,19 @@ class AstPrinter(Visitor):
     def visit_array(self, node: Array) -> str:
         return self.parenthesize("array", *node.elements)
 
+    def visit_array_access(self, node: ArrayAccess) -> str:
+        array_str = node.array.accept(self)
+        index_str = node.index.accept(self)
+        return f"(array-access {array_str} {index_str})"
+    
+    def visit_array_assign(self, node: ArrayAssign) -> str:
+        array_str = node.array.accept(self)
+        index_str = node.index.accept(self)
+        value_str = node.value.accept(self)
+        return f"(array-assign {array_str} {index_str} {value_str})"
+
     def visit_dict(self, node: Dict) -> str:
-        # Convert pairs to strings first
         pair_strings = [self.parenthesize("pair", key, value) for key, value in node.pairs]
-        # Join them as a single string
         pairs_str = " ".join(pair_strings)
         return f"(dict {pairs_str})"
 

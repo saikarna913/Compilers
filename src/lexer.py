@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional, Any
 
-# Token types
+# Token types (removed QUOT)
 INTEGER = 'INTEGER'
 FLOAT = 'FLOAT'
 STRING = 'STRING'
@@ -13,7 +13,6 @@ MULTIPLY = 'MULTIPLY'
 DIVIDE = 'DIVIDE'
 EXPONENT = 'EXPONENT'
 REM = 'REM'
-QUOT = 'QUOT'
 LT = 'LT'
 GT = 'GT'
 LTE = 'LTE'
@@ -48,7 +47,7 @@ LBRACKET   = 'LBRACKET'
 RBRACKET   = 'RBRACKET'
 COMMA      = 'COMMA'
 COLON      = 'COLON'
-QUESTION_MARK = 'QUESTION_MARK'  # New token for '?'
+QUESTION_MARK = 'QUESTION_MARK'  
 EOF = 'EOF'
 STEP = 'STEP'
 
@@ -106,13 +105,15 @@ class Lexer:
                 raise LexerError(start_line, "Unterminated block comment")
             self.advance()  # Skip '*'
             self.advance()  # Skip '/'
+            # If a newline immediately follows a block comment, skip it to match expected line numbering.
+            if self.current_char == '\n':
+                self.advance()
 
     def string(self):
         result = ''
         start_line = self.line
         self.advance()  # Skip opening quote
         while self.current_char and self.current_char != '"':
-            # Don't increment line counter here, let advance() handle it
             result += self.current_char
             self.advance()
         if not self.current_char:
@@ -142,7 +143,7 @@ class Lexer:
             result += self.current_char
             self.advance()
         keywords = {
-            "let": LET, "assign": ASSIGN, "True": TRUE, "False": FALSE, "rem": REM, "quot": QUOT,
+            "let": LET, "assign": ASSIGN, "True": TRUE, "False": FALSE, "rem": REM,
             "and": AND, "or": OR, "not": NOT, "if": IF, "else": ELSE, "while": WHILE, "for": FOR,
             "in": IN, "to": TO, "repeat": REPEAT, "until": UNTIL, "match": MATCH, "func": FUNC,
             "return": RETURN, "print": PRINT, "step": STEP
@@ -187,6 +188,9 @@ class Lexer:
             if self.current_char == '/':
                 self.advance()
                 return Token(DIVIDE, '/', start_line)
+            if self.current_char == '%':     
+                self.advance()
+                return Token(REM, '%', start_line)
             if self.current_char == '<':
                 self.advance()
                 if self.current_char == '=':
@@ -235,7 +239,7 @@ class Lexer:
             if self.current_char == ':':
                 self.advance()
                 return Token(COLON, ':', start_line)
-            if self.current_char == '?':  # New token for question mark
+            if self.current_char == '?':  
                 self.advance()
                 return Token(QUESTION_MARK, '?', start_line)
             print(f"[line {start_line}] Lexer Warning: Skipping unexpected character: '{self.current_char}'")
