@@ -41,7 +41,7 @@ Variables are dynamically typed and lexically scoped. They are declared with `le
 Supported operators follow standard mathematical precedence:
 - `+` (addition), `-` (subtraction), `*` (multiplication), `/` (division), `**` (exponentiation), `rem` (remainder), `quot` (integer division)
 - Example: `10 + 5 * 2` evaluates to `20` (multiplication precedes addition).
-- Precedence: `()` > `**` (right-associative) > `* / rem quot` (left-associative) > `+ -` (left-associative)
+- Precedence: `()` > `**` (right-associative) > `* / rem` (left-associative) > `+ -` (left-associative)
 
 #### Comparison Operators
 - `<`, `>`, `<=`, `>=`, `==`, `!=`
