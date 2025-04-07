@@ -1,8 +1,8 @@
-from src.lexer import (Lexer, Token, LET, IF, WHILE, FOR, FUNC, RETURN, PRINT, ELSE, ASSIGN, EQUALS,
+from lexer import (Lexer, Token, LET, IF, WHILE, FOR, FUNC, RETURN, PRINT, ELSE, ASSIGN, EQUALS,
                   PLUS, MINUS, MULTIPLY, DIVIDE, EXPONENT, REM, LPAREN, RPAREN, LBRACE, RBRACE,
                   LT, GT, LTE, GTE, EQEQ, NOTEQ, AND, OR, NOT, COMMA, LBRACKET, RBRACKET, COLON,
                   IDENTIFIER, INTEGER, FLOAT, STRING, TRUE, FALSE, EOF, TO, IN, REPEAT, UNTIL, MATCH, ARROW, QUESTION_MARK, STEP)
-from src.ast_1 import (AST, BinOp, UnaryOp, Integer, Float, String, Boolean, Var, VarAssign, VarReassign, Block,
+from ast_1 import (AST, BinOp, UnaryOp, Integer, Float, String, Boolean, Var, VarAssign, VarReassign, Block,
                   If, While, For, FuncDef, Return, FuncCall, Print, Array, Dict, ConditionalExpr,
                   RepeatUntil, Match, MatchCase, AstPrinter, Lambda,ArrayAccess,ArrayAssign)
 
@@ -107,9 +107,17 @@ class Parser:
         if self.peek().type == IDENTIFIER:
             var_name = self.peek().value
             token = self.consume(IDENTIFIER, "Expected an identifier")
-
-            if self.peek().type == LBRACKET:
-                node = self.array_access(Var(var_name, token))  # Pass Var node instead of string
+            if self.peek().type == LPAREN:  # Function call
+                args = []
+                self.consume(LPAREN, "Expected '(' after function name")
+                if self.peek().type != RPAREN:
+                    args.append(self.expression())
+                    while self.match(COMMA):
+                        args.append(self.expression())
+                self.consume(RPAREN, "Expected ')' after arguments")
+                return FuncCall(Var(var_name, token), args, token=token)
+            elif self.peek().type == LBRACKET:
+                node = self.array_access(Var(var_name, token))
                 if self.peek().type == EQUALS:
                     self.consume(EQUALS, "Expected '=' in array assignment")
                     value = self.assignment()
@@ -121,7 +129,6 @@ class Parser:
                 return VarReassign(var_name, value, token)
             return Var(var_name, token)
         return self.expression_statement()
-
 
     def let_statement(self) -> VarAssign:
         self.advance()  # Consume 'let'
