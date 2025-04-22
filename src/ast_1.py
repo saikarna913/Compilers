@@ -84,12 +84,18 @@ class While(AST):
     body: AST
 
 @dataclass
-class For(AST):
-    var_name: str
-    start: AST
-    end: AST
-    body: AST
-    step: Optional[AST] = None
+class For:
+    def __init__(self, variable, start, end, body, step=None, token=None):
+        self.variable = variable
+        self.start = start
+        self.end = end
+        self.body = body
+        self.step = step
+        self.token = token
+        
+    def accept(self, visitor):
+        method_name = f'visit_{self.__class__.__name__.lower()}'
+        return getattr(visitor, method_name)(self)
 
 @dataclass
 class RepeatUntil(AST):
@@ -175,6 +181,22 @@ class Print(AST):
     """Print statement node"""
     expression: AST
     token: Optional[Token] = None
+
+class Break:
+    def __init__(self, token=None):
+        self.token = token
+        
+    def accept(self, visitor):
+        method_name = f'visit_{self.__class__.__name__.lower()}'
+        return getattr(visitor, method_name)(self)
+
+class Continue:
+    def __init__(self, token=None):
+        self.token = token
+        
+    def accept(self, visitor):
+        method_name = f'visit_{self.__class__.__name__.lower()}'
+        return getattr(visitor, method_name)(self)
 
 # Visitor interface
 class Visitor:

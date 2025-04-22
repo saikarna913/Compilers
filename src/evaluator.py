@@ -14,7 +14,10 @@ sys.setrecursionlimit(3000)
 class FluxRuntimeError(Exception):
     def __init__(self, token: Token, message: str):
         self.token = token
-        self.message = f"[line {token.line}] Error at '{token.value}': {message}"
+        if token is None:
+            self.message = f"Error: {message}"
+        else:
+            self.message = f"[line {token.line}] Error at '{token.value}': {message}"
         super().__init__(self.message)
 
 class Environment:
@@ -134,6 +137,29 @@ class Function:
             evaluator.env = prev_env
             return r.value
 
+class BreakException(Exception):
+    """Exception raised when a break statement is executed."""
+    pass
+
+class ContinueException(Exception):
+    """Exception raised when a continue statement is executed."""
+    pass
+
+# Custom class for arrays to support length property
+class FluxArray(list):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+    @property
+    def length(self):
+        return len(self)
+        
+    def floor(self):
+        """For numeric values, return the floor"""
+        if len(self) != 1 or not isinstance(self[0], (int, float)):
+            raise ValueError("floor() can only be called on a numeric value")
+        return int(self[0])
+
 class Evaluator:
     def __init__(self):
         self.global_env = Environment()
@@ -146,6 +172,7 @@ class Evaluator:
         """Add built-in functions to the global environment"""
         # Add len() function
         self.global_env.define("len", BuiltinFunction(self.builtin_len, "len"))
+        self.global_env.define("floor", BuiltinFunction(self.builtin_floor, "floor"))
 
     def builtin_len(self, arguments, token):
         """Handles len(array), len(string), and len(dict)."""
@@ -164,6 +191,18 @@ class Evaluator:
             return arg.__len__()
 
         raise FluxRuntimeError(token, f"'len' expects an array, string, or dictionary, but got {type(arg).__name__}")
+
+    def builtin_floor(self, arguments, token):
+        """Handles floor(number) function."""
+        if len(arguments) != 1:
+            raise FluxRuntimeError(token, f"'floor' expected 1 argument, got {len(arguments)}")
+        
+        arg = arguments[0]
+        
+        if not isinstance(arg, (int, float)):
+            raise FluxRuntimeError(token, f"'floor' expects a number, but got {type(arg).__name__}")
+            
+        return int(arg)
 
     def interpret(self, tree: Block) -> Any:
         try:
@@ -224,6 +263,27 @@ class Evaluator:
         return node.value
 
     def visit_var(self, node: Var) -> Any:
+        # Special handling for property access like arr.length
+        if '.' in node.name:
+            parts = node.name.split('.')
+            if len(parts) == 2:
+                obj_name, prop_name = parts
+                obj = self.env.get(obj_name, node.token)
+                
+                # Handle array length
+                if prop_name == 'length' and isinstance(obj, list):
+                    return len(obj)
+                    
+                # Handle numeric methods like floor()
+                elif prop_name == 'floor' and isinstance(obj, (int, float)):
+                    return int(obj)
+                    
+                # Handle accessing object properties
+                elif hasattr(obj, prop_name):
+                    return getattr(obj, prop_name)
+                    
+                raise FluxRuntimeError(node.token, f"Property '{prop_name}' does not exist on {type(obj).__name__}")
+        
         return self.env.get(node.name, node.token)
 
     def visit_var_assign(self, node: VarAssign) -> Any:
@@ -249,7 +309,9 @@ class Evaluator:
                 return left + self.stringify(right)
             if isinstance(left, (int, float, bool, Function)) and isinstance(right, str):
                 return self.stringify(left) + right
-            raise FluxRuntimeError(node.operator, "Operands must be two numbers, two strings, or a string and another type for '+'")
+            if isinstance(left, list) and isinstance(right, list):
+                return left + right  # Support array concatenation
+            raise FluxRuntimeError(node.operator, "Operands must be two numbers, two strings, two arrays, or a string and another type for '+'")
         
         if op_type == MINUS:
             self.check_number_operands(node.operator, left, right)
@@ -317,44 +379,109 @@ class Evaluator:
 
     def visit_while(self, node: While) -> Any:
         result = None
-        while self.is_truthy(self.evaluate(node.condition)):
-            result = self.evaluate(node.body)
+    
+        try:
+            while self.is_truthy(self.evaluate(node.condition)):
+                try:
+                    # Execute the body of the loop
+                    result = self.execute_block(node.body, self.env)
+                except BreakException:
+                    break
+                except ContinueException:
+                    # Just skip to the next iteration
+                    continue
+        except Exception as e:
+            if not isinstance(e, (BreakException, ContinueException)):
+                raise e
+                
         return result
 
-    def visit_for(self, node: For) -> Any:
+    def visit_for(self, node):
+        """Execute a for loop with support for break and continue."""
+        # Evaluate start and end expressions
         start = self.evaluate(node.start)
         end = self.evaluate(node.end)
-        step = self.evaluate(node.step) if node.step else 1
-
-        if not isinstance(start, (int, float)):
-            raise FluxRuntimeError(Token("IDENTIFIER", node.var_name, 0), "Start value must be a number")
-        if not isinstance(end, (int, float)):
-            raise FluxRuntimeError(Token("IDENTIFIER", node.var_name, 0), "End value must be a number")
-        if not isinstance(step, (int, float)):
-            raise FluxRuntimeError(Token("IDENTIFIER", node.var_name, 0), "Step value must be a number")
-        if step == 0:
-            raise FluxRuntimeError(Token("IDENTIFIER", node.var_name, 0), "Step cannot be zero")
-
+        
+        # Get step value (default to 1 if not provided)
+        step = 1
+        if node.step:
+            step = self.evaluate(node.step)
+        
+        # Create a new environment for the loop scope
         loop_env = Environment(self.env)
-        loop_env.define(node.var_name, start)
         
+        # Token for variable access
+        var_token = getattr(node, 'token', None)
+        
+        # Initialize loop variable
+        loop_env.define(node.variable, start)
+        
+        # Execute loop
         result = None
-        current = start
         
-        while (step > 0 and current <= end) or (step < 0 and current >= end):
-            body_env = Environment(loop_env)
-            result = self.execute_block(node.body, body_env)
-            current += step
-            loop_env.assign(node.var_name, current, Token("IDENTIFIER", node.var_name, 0))
+        try:
+            # Loop logic based on step direction
+            if step > 0:
+                while loop_env.get(node.variable, var_token) < end:
+                    try:
+                        # Execute loop body with the loop environment
+                        old_env = self.env
+                        self.env = loop_env
+                        result = self.execute_block(node.body, loop_env)
+                        self.env = old_env
+                    except BreakException:
+                        break
+                    except ContinueException:
+                        # Skip to the next iteration
+                        pass
+                    
+                    # Increment loop variable
+                    current = loop_env.get(node.variable, var_token)
+                    loop_env.assign(node.variable, current + step, var_token)
+            else:
+                while loop_env.get(node.variable, var_token) > end:
+                    try:
+                        # Execute loop body with the loop environment
+                        old_env = self.env
+                        self.env = loop_env
+                        result = self.execute_block(node.body, loop_env)
+                        self.env = old_env
+                    except BreakException:
+                        break
+                    except ContinueException:
+                        # Skip to the next iteration
+                        pass
+                    
+                    # Decrement loop variable
+                    current = loop_env.get(node.variable, var_token)
+                    loop_env.assign(node.variable, current + step, var_token)
+        except Exception as e:
+            if not isinstance(e, (BreakException, ContinueException)):
+                raise e
         
         return result
 
     def visit_repeat_until(self, node: RepeatUntil) -> Any:
         result = None
-        while True:
-            result = self.evaluate(node.body)
-            if self.is_truthy(self.evaluate(node.condition)):
-                break
+    
+        try:
+            while True:
+                try:
+                    # Execute the body
+                    result = self.execute_block(node.body, self.env)
+                except BreakException:
+                    break
+                except ContinueException:
+                    # Just continue to the condition check
+                    pass
+                    
+                # Check if we should exit the loop
+                if self.is_truthy(self.evaluate(node.condition)):
+                    break
+        except Exception as e:
+            if not isinstance(e, (BreakException, ContinueException)):
+                raise e
+                
         return result
 
     def visit_match(self, node: Match) -> Any:
@@ -383,6 +510,17 @@ class Evaluator:
 
     def visit_func_call(self, node: FuncCall) -> Any:
         callee = self.evaluate(node.callee)
+        
+        # Special handling for method calls like arr.length or num.floor()
+        if hasattr(node.callee, 'name') and '.' in node.callee.name:
+            parts = node.callee.name.split('.')
+            if len(parts) == 2:
+                obj_name, method_name = parts
+                obj = self.env.get(obj_name, node.token)
+                
+                # Handle floor method for numbers
+                if method_name == 'floor' and isinstance(obj, (int, float)):
+                    return int(obj)
         
         if not isinstance(callee, (Function, BuiltinFunction)):
             raise FluxRuntimeError(
@@ -419,8 +557,15 @@ class Evaluator:
         return [self.evaluate(element) for element in node.elements]
 
     def visit_array_assign(self, node: ArrayAssign) -> Any:
-        array_name = node.array if isinstance(node.array, str) else node.array.name
-        array = self.env.get(array_name, node.token)
+        # Get the array object
+        if hasattr(node.array, 'name'):
+            array_name = node.array.name
+            array = self.env.get(array_name, node.token)
+        else:
+            array_name = node.array
+            array = self.env.get(array_name, node.token)
+        
+        # Get the index and value
         index = self.evaluate(node.index)
         value = self.evaluate(node.value)
 
@@ -431,23 +576,42 @@ class Evaluator:
         if index < 0 or index >= len(array):
             raise FluxRuntimeError(node.token, f"Array index {index} out of bounds")
 
-        array[index] = value
-        self.env.assign(array_name, array, node.token)
+        # Create a new array with the updated value
+        new_array = array.copy()
+        new_array[index] = value
+        
+        # Update the environment with the new array
+        self.env.assign(array_name, new_array, node.token)
         return value
     
     def visit_array_access(self, node: ArrayAccess) -> Any:
-        array_name = node.array if isinstance(node.array, str) else node.array.name
-        array = self.env.get(array_name, node.token)
+        # Get the array or dictionary
+        if hasattr(node.array, 'name'):
+            array_name = node.array.name
+            array = self.env.get(array_name, node.token)
+        else:
+            array_name = node.array
+            array = self.env.get(array_name, node.token)
+        
         index = self.evaluate(node.index)
 
-        if not isinstance(array, list):
-            raise FluxRuntimeError(node.token, f"Cannot index non-array type: {type(array).__name__}")
-        if not isinstance(index, int):
-            raise FluxRuntimeError(node.token, f"Array index must be an integer, got {type(index).__name__}")
-        if index < 0 or index >= len(array):
-            raise FluxRuntimeError(node.token, f"Array index {index} out of bounds")
-
-        return array[index]
+        # Handle different indexable types
+        if isinstance(array, list):
+            if not isinstance(index, int):
+                raise FluxRuntimeError(node.token, f"Array index must be an integer, got {type(index).__name__}")
+            if index < 0 or index >= len(array):
+                raise FluxRuntimeError(node.token, f"Array index {index} out of bounds")
+            return array[index]
+        elif isinstance(array, str):  # Add support for string indexing
+            if not isinstance(index, int):
+                raise FluxRuntimeError(node.token, f"String index must be an integer, got {type(index).__name__}")
+            if index < 0 or index >= len(array):
+                raise FluxRuntimeError(node.token, f"String index {index} out of bounds")
+            return array[index]
+        elif isinstance(array, dict):
+            return array.get(index)
+        else:
+            raise FluxRuntimeError(node.token, f"Cannot index non-array/dictionary type: {type(array).__name__}")
 
     def visit_dict(self, node: Dict) -> Dict[Any, Any]:
         return {self.evaluate(k): self.evaluate(v) for k, v in node.pairs}
@@ -462,6 +626,14 @@ class Evaluator:
         value = self.evaluate(node.expression)
         print(self.stringify(value))
         return value
+
+    def visit_break(self, node):
+        """Handle a break statement by raising a BreakException."""
+        raise BreakException()
+
+    def visit_continue(self, node):
+        """Handle a continue statement by raising a ContinueException."""
+        raise ContinueException()
 
     def check_number_operand(self, operator: Token, operand: Any):
         if not isinstance(operand, (int, float)):

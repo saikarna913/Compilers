@@ -1,10 +1,10 @@
-from lexer import (Lexer, Token, LET, IF, WHILE, FOR, FUNC, RETURN, PRINT, ELSE, ASSIGN, EQUALS,
+from src.lexer import (Lexer, Token, LET, IF, WHILE, FOR, FUNC, RETURN, PRINT, ELSE, ASSIGN, EQUALS,
                   PLUS, MINUS, MULTIPLY, DIVIDE, EXPONENT, REM, LPAREN, RPAREN, LBRACE, RBRACE,
                   LT, GT, LTE, GTE, EQEQ, NOTEQ, AND, OR, NOT, COMMA, LBRACKET, RBRACKET, COLON,
-                  IDENTIFIER, INTEGER, FLOAT, STRING, TRUE, FALSE, EOF, TO, IN, REPEAT, UNTIL, MATCH, ARROW, QUESTION_MARK, STEP)
-from ast_1 import (AST, BinOp, UnaryOp, Integer, Float, String, Boolean, Var, VarAssign, VarReassign, Block,
+                  IDENTIFIER, INTEGER, FLOAT, STRING, TRUE, FALSE, EOF, TO, IN, REPEAT, UNTIL, MATCH, ARROW, QUESTION_MARK, STEP, BREAK, CONTINUE)
+from src.ast_1 import (AST, BinOp, UnaryOp, Integer, Float, String, Boolean, Var, VarAssign, VarReassign, Block,
                   If, While, For, FuncDef, Return, FuncCall, Print, Array, Dict, ConditionalExpr,
-                  RepeatUntil, Match, MatchCase, AstPrinter, Lambda,ArrayAccess,ArrayAssign)
+                  RepeatUntil, Match, MatchCase, AstPrinter, Lambda,ArrayAccess,ArrayAssign, Break, Continue)
 
 class ParseError(Exception):
     pass
@@ -94,6 +94,10 @@ class Parser:
             return self.while_statement()
         if self.peek().type == FOR:
             return self.for_statement()
+        if self.peek().type == BREAK:
+            return self.break_statement()
+        if self.peek().type == CONTINUE:
+            return self.continue_statement()
         if self.peek().type == REPEAT:
             return self.repeat_statement()
         if self.peek().type == MATCH:
@@ -163,7 +167,13 @@ class Parser:
         
         self.consume(LET, "Expected 'let' after 'for ('")
         name_token = self.consume(IDENTIFIER, "Expected variable name")
-        self.consume(ASSIGN, "Expected '=' after variable name")
+        
+        # Allow both EQUALS (=) and ASSIGN keywords for loop initialization
+        if self.peek().type == EQUALS:
+            self.consume(EQUALS, "Expected '=' after variable name")
+        else:
+            self.consume(ASSIGN, "Expected '=' after variable name")
+            
         start = self.expression()
         
         self.consume(TO, "Expected 'to' after start expression")
@@ -176,7 +186,16 @@ class Parser:
         self.consume(RPAREN, "Expected ')' after for loop header")
         body = self.block()
         
-        return For(name_token.value, start, end, body, step, token=token)
+        # Remove token parameter if For class doesn't accept it
+        return For(name_token.value, start, end, body, step)
+
+    def break_statement(self) -> Break:
+        token = self.advance()  # Consume 'break'
+        return Break(token=token)
+        
+    def continue_statement(self) -> Continue:
+        token = self.advance()  # Consume 'continue'
+        return Continue(token=token)
 
     def repeat_statement(self) -> RepeatUntil:
         self.advance()  # Consume 'repeat'

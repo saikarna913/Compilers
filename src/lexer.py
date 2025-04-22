@@ -50,6 +50,8 @@ COLON      = 'COLON'
 QUESTION_MARK = 'QUESTION_MARK'  
 EOF = 'EOF'
 STEP = 'STEP'
+BREAK = 'BREAK'
+CONTINUE = 'CONTINUE'
 
 @dataclass
 class Token:
@@ -146,7 +148,7 @@ class Lexer:
             "let": LET, "assign": ASSIGN, "True": TRUE, "False": FALSE, "rem": REM,
             "and": AND, "or": OR, "not": NOT, "if": IF, "else": ELSE, "while": WHILE, "for": FOR,
             "in": IN, "to": TO, "repeat": REPEAT, "until": UNTIL, "match": MATCH, "func": FUNC,
-            "return": RETURN, "print": PRINT, "step": STEP
+            "return": RETURN, "print": PRINT, "step": STEP, "break":BREAK, "continue":CONTINUE
         }
         token_type = keywords.get(result, IDENTIFIER)
         if token_type == TRUE:
