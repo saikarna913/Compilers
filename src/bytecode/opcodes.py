@@ -1,9 +1,16 @@
 """
-Bytecode Operation Codes (Opcodes) for the FluxScript Virtual Machine
+FluxScript Bytecode Opcodes Module
 
-This module defines the operation codes (opcodes) that the FluxScript 
-virtual machine understands. Each opcode corresponds to a specific 
-operation that can be performed by the VM.
+This module defines the operation codes (opcodes) for the FluxScript virtual machine. Each opcode represents a low-level operation that the VM can execute. The opcodes are grouped by functionality, and a mapping from opcode values to names is provided for debugging.
+
+Features:
+- Constants for all supported VM operations
+- Grouped by category: constants, variables, arithmetic, logic, control flow, functions, data structures, I/O, and misc
+- OPCODE_NAMES dictionary for readable debugging
+
+Usage:
+    from .opcodes import *
+    # Use opcodes in the compiler and VM
 """
 
 # Constants and Literals

@@ -1,3 +1,20 @@
+"""
+FluxScript Parser Module
+
+This module implements the parser for the FluxScript language. It converts a stream of tokens from the lexer into an abstract syntax tree (AST) for further compilation or interpretation.
+
+Features:
+- Recursive descent parsing for statements and expressions
+- Handles variable declarations, control flow, functions, arrays, and dictionaries
+- Tracks scope and variables for free variable analysis
+- Error handling and synchronization for robust parsing
+
+Usage:
+    lexer = Lexer(code)
+    parser = Parser(lexer)
+    ast = parser.parse()
+"""
+
 from src.lexer.lexer import (Lexer, Token, LET, IF, WHILE, FOR, FUNC, RETURN, PRINT, ELSE, ASSIGN, EQUALS,
                             PLUS, MINUS, MULTIPLY, DIVIDE, EXPONENT, REM, LPAREN, RPAREN, LBRACE, RBRACE,
                             LT, GT, LTE, GTE, EQEQ, NOTEQ, AND, OR, NOT, COMMA, LBRACKET, RBRACKET, COLON,
@@ -8,9 +25,20 @@ from src.AST.ast_1 import (AST, BinOp, UnaryOp, Integer, Float, String, Boolean,
 from typing import List, Set
 
 class ParseError(Exception):
+    """Exception raised for parsing errors."""
     pass
 
 class Parser:
+    """
+    FluxScript Parser
+    Converts a list of tokens into an abstract syntax tree (AST).
+    Attributes:
+        lexer: The lexer instance
+        tokens: List of tokens
+        pos: Current position in the token list
+        scope_level: Current scope depth
+        variables: Set of defined variables for free variable analysis
+    """
     def __init__(self, lexer: Lexer):
         self.lexer = lexer
         self.tokens = self._tokenize()
@@ -19,6 +47,10 @@ class Parser:
         self.variables = set()  # Track defined variables for free_vars analysis
 
     def _tokenize(self):
+        """
+        Tokenize the input using the lexer and return a list of tokens.
+        Raises ParseError on lexer errors.
+        """
         tokens = []
         while True:
             try:
@@ -33,11 +65,13 @@ class Parser:
         return tokens
 
     def peek(self):
+        """Return the current token without advancing."""
         if self.pos >= len(self.tokens):
             return self.tokens[-1]  # EOF
         return self.tokens[self.pos]
 
     def advance(self):
+        """Advance to the next token and return it."""
         if self.pos < len(self.tokens):
             token = self.tokens[self.pos]
             self.pos += 1
@@ -45,22 +79,27 @@ class Parser:
         return self.tokens[-1]  # EOF
 
     def previous(self):
+        """Return the previous token."""
         if self.pos > 0:
             return self.tokens[self.pos - 1]
         raise ParseError("No previous token available.")
 
     def check(self, token_type):
+        """Check if the current token matches the given type."""
         return self.peek().type == token_type
 
     def is_at_end(self):
+        """Check if the parser has reached the end of input."""
         return self.peek().type == EOF
 
     def match(self, *types):
+        """Advance if the current token matches any of the given types."""
         if self.peek().type in types:
             return self.advance()
         return None
 
     def consume(self, token_type: str, message: str, suggestion: str = ""):
+        """Consume a token of the expected type or raise a ParseError."""
         if self.peek().type == token_type:
             return self.advance()
         error_msg = f"[line {self.peek().line}] Error at '{self.peek().value}': {message}"
@@ -70,6 +109,7 @@ class Parser:
         raise ParseError(error_msg)
 
     def synchronize(self):
+        """Synchronize the parser after an error to a known good state."""
         self.advance()
         while not self.is_at_end():
             if self.previous().type == RBRACE or self.peek().type in (LET, IF, WHILE, FOR, FUNC, RETURN, PRINT):
@@ -77,6 +117,10 @@ class Parser:
             self.advance()
 
     def parse(self) -> Block:
+        """
+        Parse the entire input and return the root Block node.
+        Handles top-level statements and error recovery.
+        """
         statements = []
         self.scope_level = 0
         self.variables = set()
@@ -93,6 +137,9 @@ class Parser:
         return Block(statements, scope_level=self.scope_level)
 
     def statement(self) -> AST:
+        """
+        Parse a single statement (let, if, while, for, break, continue, func, return, print, or expression).
+        """
         if self.peek().type == LET:
             return self.let_statement()
         if self.peek().type == IF:
@@ -116,6 +163,7 @@ class Parser:
         return self.expression_statement()
 
     def let_statement(self) -> VarAssign:
+        """Parse a variable declaration statement."""
         let_token = self.advance()  # Consume 'let'
         if not self.check(IDENTIFIER):
             raise self.error(let_token, "Expected variable name after 'let'", "Use a valid identifier")
@@ -126,6 +174,7 @@ class Parser:
         return VarAssign(name_token.value, value, name_token)
 
     def if_statement(self) -> If:
+        """Parse an if-else statement."""
         if_token = self.advance()  # Consume 'if'
         self.consume(LPAREN, "Expected '(' after 'if'", "Enclose condition in parentheses")
         condition = self.expression()
@@ -138,6 +187,7 @@ class Parser:
         return If(condition, then_branch, else_branch)
 
     def while_statement(self) -> While:
+        """Parse a while loop statement."""
         self.advance()  # Consume 'while'
         self.consume(LPAREN, "Expected '(' after 'while'", "Enclose condition in parentheses")
         condition = self.expression()
@@ -146,6 +196,7 @@ class Parser:
         return While(condition, body)
 
     def for_statement(self) -> For:
+        """Parse a for loop statement."""
         token = self.advance()  # Consume 'for'
         self.consume(LPAREN, "Expected '(' after 'for'", "Start for loop with '('")
         self.consume(LET, "Expected 'let' after 'for ('", "Declare loop variable with 'let'")
@@ -163,14 +214,17 @@ class Parser:
         return For(name_token.value, start, end, body, step, token)
 
     def break_statement(self) -> Break:
+        """Parse a break statement."""
         token = self.advance()  # Consume 'break'
         return Break(token=token)
 
     def continue_statement(self) -> Continue:
+        """Parse a continue statement."""
         token = self.advance()  # Consume 'continue'
         return Continue(token=token)
 
     def function_definition(self) -> FuncDef:
+        """Parse a function definition statement."""
         func_token = self.advance()  # Consume 'func'
         if not self.check(IDENTIFIER):
             raise self.error(func_token, "Expected function name after 'func'", "Use a valid identifier")
@@ -195,16 +249,22 @@ class Parser:
         return FuncDef(name_token.value, params, body, free_vars=free_vars, scope_level=self.scope_level, token=name_token)
 
     def return_statement(self) -> Return:
+        """Parse a return statement."""
         token = self.advance()  # Consume 'return'
         expr = self.expression()
         return Return(expr, token=token)
 
     def print_statement(self) -> Print:
+        """Parse a print statement."""
         self.advance()  # Consume 'print'
         expr = self.expression()
         return Print(expr)
 
     def block(self) -> Block:
+        """
+        Parse a block of statements enclosed in braces.
+        Increases scope level for variable tracking.
+        """
         self.consume(LBRACE, "Expected '{' to start block", "Start block with '{'")
         self.scope_level += 1
         statements = []
@@ -218,7 +278,7 @@ class Parser:
         return block
 
     def expression_statement(self) -> AST:
-        """Parse an expression statement"""
+        """Parse an expression statement, including assignments and binary expressions."""
         # First, try to parse a normal expression
         start_pos = self.pos
         expr = self.expression()
@@ -248,9 +308,11 @@ class Parser:
         return expr
 
     def expression(self) -> AST:
+        """Parse an expression (entry point for expressions)."""
         return self.logic_or()
 
     def logic_or(self) -> AST:
+        """Parse logical OR expressions."""
         expr = self.logic_and()
         while self.match(OR):
             op = self.previous()
@@ -259,6 +321,7 @@ class Parser:
         return expr
 
     def logic_and(self) -> AST:
+        """Parse logical AND expressions."""
         expr = self.equality()
         while self.match(AND):
             op = self.previous()
@@ -267,6 +330,7 @@ class Parser:
         return expr
 
     def equality(self) -> AST:
+        """Parse equality (==, !=) expressions."""
         expr = self.comparison()
         while self.match(EQEQ, NOTEQ):
             op = self.previous()
@@ -275,6 +339,7 @@ class Parser:
         return expr
 
     def comparison(self) -> AST:
+        """Parse comparison (<, >, <=, >=) expressions."""
         expr = self.term()
         while self.match(LT, GT, LTE, GTE):
             op = self.previous()
@@ -283,6 +348,7 @@ class Parser:
         return expr
 
     def term(self) -> AST:
+        """Parse addition and subtraction expressions."""
         expr = self.factor()
         while self.match(PLUS, MINUS):
             op = self.previous()
@@ -291,6 +357,7 @@ class Parser:
         return expr
 
     def factor(self) -> AST:
+        """Parse multiplication, division, and remainder expressions."""
         expr = self.power()
         while self.match(MULTIPLY, DIVIDE, REM):
             op = self.previous()
@@ -299,6 +366,7 @@ class Parser:
         return expr
 
     def power(self) -> AST:
+        """Parse exponentiation expressions."""
         expr = self.unary()
         while self.match(EXPONENT):
             op = self.previous()
@@ -307,6 +375,7 @@ class Parser:
         return expr
 
     def unary(self) -> AST:
+        """Parse unary operations (negation, logical NOT)."""
         if self.match(MINUS, NOT):
             op = self.previous()
             right = self.unary()
@@ -315,6 +384,7 @@ class Parser:
         return self.call()
 
     def call(self) -> AST:
+        """Parse function call expressions."""
         expr = self.primary()
         while self.match(LPAREN):
             args = []
@@ -327,6 +397,10 @@ class Parser:
         return expr
 
     def primary(self) -> AST:
+        """
+        Parse primary expressions: literals, variables, grouped expressions, arrays, dictionaries, and array access.
+        Handles special cases for array append and assignment.
+        """
         if self.match(INTEGER):
             return Integer(self.previous().value)
         if self.match(FLOAT):
@@ -409,7 +483,10 @@ class Parser:
         raise self.error(self.peek(), "Expected expression", "Check for a valid number, string, boolean, variable, or expression")
 
     def analyze_free_vars(self, node: AST, params: List[str]) -> List[str]:
-        """Analyze free variables in a function body, excluding parameters and local variables."""
+        """
+        Analyze free variables in a function body, excluding parameters and local variables.
+        Returns a list of free variable names.
+        """
         free_vars = set()
         local_vars = set(params)
         
@@ -498,12 +575,14 @@ class Parser:
         return list(free_vars)
 
     def error(self, token, message, suggestion=""):
+        """Create a ParseError with a helpful message and suggestion."""
         error_msg = f"[line {token.line}] Error at '{token.value}': {message}"
         if suggestion:
             error_msg += f" Suggestion: {suggestion}"
         return ParseError(error_msg)
 
 def parse_code(code: str) -> Block:
+    """Helper function to parse code and print the AST."""
     lexer = Lexer(code)
     parser = Parser(lexer)
     ast = parser.parse()
@@ -512,6 +591,7 @@ def parse_code(code: str) -> Block:
     return ast
 
 if __name__ == "__main__":
+    # Example usage: parse a sample FluxScript program
     code = """
     let x = 5
     let y = 10
