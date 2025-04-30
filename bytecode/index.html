@@ -1,0 +1,1283 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../fluxscript/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.11">
+    
+    
+      
+        <title>FluxScript Bytecode Documentation - Flux Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.4af4bdda.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#fluxscript-bytecode-documentation" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Flux Documentation" class="md-header__button md-logo" aria-label="Flux Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Flux Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              FluxScript Bytecode Documentation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Flux Documentation" class="md-nav__button md-logo" aria-label="Flux Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Flux Documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Compilers - CS327
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    FluxScript Bytecode Documentation
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    FluxScript Bytecode Documentation
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bytecode-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Bytecode Structure
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#opcodes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Opcodes
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Opcodes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#constants-and-literals" class="md-nav__link">
+    <span class="md-ellipsis">
+      Constants and Literals
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Variables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#arithmetic-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Arithmetic Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comparison-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Comparison Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#logical-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Logical Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#control-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Control Flow
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Functions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-structures" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Structures
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#io-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      I/O Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#miscellaneous" class="md-nav__link">
+    <span class="md-ellipsis">
+      Miscellaneous
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#program-termination" class="md-nav__link">
+    <span class="md-ellipsis">
+      Program Termination
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#execution-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      Execution Model
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#built-in-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Built-in Functions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#debugging" class="md-nav__link">
+    <span class="md-ellipsis">
+      Debugging
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fluxscript/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    FluxScript
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting_started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    FluxScript Getting Started
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bytecode-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Bytecode Structure
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#opcodes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Opcodes
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Opcodes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#constants-and-literals" class="md-nav__link">
+    <span class="md-ellipsis">
+      Constants and Literals
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Variables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#arithmetic-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Arithmetic Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comparison-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Comparison Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#logical-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Logical Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#control-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Control Flow
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Functions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-structures" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Structures
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#io-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      I/O Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#miscellaneous" class="md-nav__link">
+    <span class="md-ellipsis">
+      Miscellaneous
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#program-termination" class="md-nav__link">
+    <span class="md-ellipsis">
+      Program Termination
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#execution-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      Execution Model
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#built-in-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Built-in Functions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#debugging" class="md-nav__link">
+    <span class="md-ellipsis">
+      Debugging
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="fluxscript-bytecode-documentation">FluxScript Bytecode Documentation</h1>
+<p>This document describes the bytecode operations and structure used by the FluxScript Virtual Machine (VM). The bytecode is generated by the <code>BytecodeCompiler</code> and executed by the <code>BytecodeVM</code>. Each operation is represented by an opcode and optional arguments, which the VM interprets to perform computations, manage data structures, and control program flow.</p>
+<h2 id="overview">Overview</h2>
+<p>The FluxScript VM is a stack-based virtual machine designed to execute bytecode instructions generated from a source program. The VM maintains:</p>
+<ul>
+<li><strong>Stack</strong>: For operands and intermediate results.</li>
+<li><strong>Constants Table</strong>: Stores literals (integers, floats, strings, function data, etc.).</li>
+<li><strong>Frames</strong>: Manage function calls and local variables, supporting closures.</li>
+<li><strong>Instruction Set</strong>: A sequence of opcodes with arguments that dictate VM behavior.</li>
+</ul>
+<p>The <code>BytecodeCompiler</code> transforms an Abstract Syntax Tree (AST) into a sequence of instructions and a constants table. The <code>BytecodeVM</code> executes these instructions, handling operations like arithmetic, control flow, function calls, and data structure manipulation.</p>
+<h2 id="bytecode-structure">Bytecode Structure</h2>
+<p>Each instruction is a tuple of the form <code>(opcode, *args)</code>, where:
+- <code>opcode</code> is an integer identifying the operation.
+- <code>*args</code> are zero or more arguments specific to the opcode (e.g., constant indices, variable names, or jump targets).</p>
+<p>The constants table is a list of values (literals, function data, etc.) referenced by instructions via indices.</p>
+<h2 id="opcodes">Opcodes</h2>
+<p>Below is a comprehensive list of opcodes, grouped by category, along with their descriptions, stack effects, and arguments.</p>
+<h3 id="constants-and-literals">Constants and Literals</h3>
+<table>
+<thead>
+<tr>
+<th>Opcode</th>
+<th>Value</th>
+<th>Description</th>
+<th>Stack Effect</th>
+<th>Arguments</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LOAD_CONST</code></td>
+<td>1</td>
+<td>Loads a constant from the constants table onto the stack.</td>
+<td>Pushes: constant value</td>
+<td>Index into constants table</td>
+</tr>
+<tr>
+<td><code>LOAD_TRUE</code></td>
+<td>2</td>
+<td>Loads <code>True</code> onto the stack.</td>
+<td>Pushes: <code>True</code></td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>LOAD_FALSE</code></td>
+<td>3</td>
+<td>Loads <code>False</code> onto the stack.</td>
+<td>Pushes: <code>False</code></td>
+<td>None</td>
+</tr>
+</tbody>
+</table>
+<h3 id="variables">Variables</h3>
+<table>
+<thead>
+<tr>
+<th>Opcode</th>
+<th>Value</th>
+<th>Description</th>
+<th>Stack Effect</th>
+<th>Arguments</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LOAD_VAR</code></td>
+<td>10</td>
+<td>Loads a variable's value onto the stack.</td>
+<td>Pushes: variable value</td>
+<td>Variable name (string)</td>
+</tr>
+<tr>
+<td><code>STORE_VAR</code></td>
+<td>11</td>
+<td>Stores the top stack value into a variable and pushes it back.</td>
+<td>Pops: value; Pushes: value</td>
+<td>Variable name (string)</td>
+</tr>
+<tr>
+<td><code>REASSIGN_VAR</code></td>
+<td>12</td>
+<td>Reassigns a value to an existing variable and pushes it back.</td>
+<td>Pops: value; Pushes: value</td>
+<td>Variable name (string)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="arithmetic-operations">Arithmetic Operations</h3>
+<table>
+<thead>
+<tr>
+<th>Opcode</th>
+<th>Value</th>
+<th>Description</th>
+<th>Stack Effect</th>
+<th>Arguments</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ADD</code></td>
+<td>20</td>
+<td>Adds the top two stack values.</td>
+<td>Pops: right, left; Pushes: left + right</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>SUBTRACT</code></td>
+<td>21</td>
+<td>Subtracts the top value from the second-top value.</td>
+<td>Pops: right, left; Pushes: left - right</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>MULTIPLY</code></td>
+<td>22</td>
+<td>Multiplies the top two stack values.</td>
+<td>Pops: right, left; Pushes: left * right</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>DIVIDE</code></td>
+<td>23</td>
+<td>Divides the second-top value by the top value.</td>
+<td>Pops: right, left; Pushes: left / right</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>EXPONENT</code></td>
+<td>24</td>
+<td>Raises the second-top value to the power of the top value.</td>
+<td>Pops: right, left; Pushes: left ** right</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>MODULO</code></td>
+<td>25</td>
+<td>Computes the remainder of the second-top value divided by the top value.</td>
+<td>Pops: right, left; Pushes: left % right</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>NEGATE</code></td>
+<td>26</td>
+<td>Negates the top stack value.</td>
+<td>Pops: value; Pushes: -value</td>
+<td>None</td>
+</tr>
+</tbody>
+</table>
+<h3 id="comparison-operations">Comparison Operations</h3>
+<table>
+<thead>
+<tr>
+<th>Opcode</th>
+<th>Value</th>
+<th>Description</th>
+<th>Stack Effect</th>
+<th>Arguments</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EQUAL</code></td>
+<td>30</td>
+<td>Checks if the top two values are equal.</td>
+<td>Pops: right, left; Pushes: left == right</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>NOT_EQUAL</code></td>
+<td>31</td>
+<td>Checks if the top two values are not equal.</td>
+<td>Pops: right, left; Pushes: left != right</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>LESS_THAN</code></td>
+<td>32</td>
+<td>Checks if the second-top value is less than the top value.</td>
+<td>Pops: right, left; Pushes: left &lt; right</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>GREATER_THAN</code></td>
+<td>33</td>
+<td>Checks if the second-top value is greater than the top value.</td>
+<td>Pops: right, left; Pushes: left &gt; right</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>LESS_EQUAL</code></td>
+<td>34</td>
+<td>Checks if the second-top value is less than or equal to the top value.</td>
+<td>Pops: right, left; Pushes: left &lt;= right</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>GREATER_EQUAL</code></td>
+<td>35</td>
+<td>Checks if the second-top value is greater than or equal to the top value.</td>
+<td>Pops: right, left; Pushes: left &gt;= right</td>
+<td>None</td>
+</tr>
+</tbody>
+</table>
+<h3 id="logical-operations">Logical Operations</h3>
+<table>
+<thead>
+<tr>
+<th>Opcode</th>
+<th>Value</th>
+<th>Description</th>
+<th>Stack Effect</th>
+<th>Arguments</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AND</code></td>
+<td>40</td>
+<td>Performs logical AND on the top two values.</td>
+<td>Pops: right, left; Pushes: left and right</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>OR</code></td>
+<td>41</td>
+<td>Performs logical OR on the top two values.</td>
+<td>Pops: right, left; Pushes: left or right</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>NOT</code></td>
+<td>42</td>
+<td>Performs logical NOT on the top value.</td>
+<td>Pops: value; Pushes: not value</td>
+<td>None</td>
+</tr>
+</tbody>
+</table>
+<h3 id="control-flow">Control Flow</h3>
+<table>
+<thead>
+<tr>
+<th>Opcode</th>
+<th>Value</th>
+<th>Description</th>
+<th>Stack Effect</th>
+<th>Arguments</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>JUMP</code></td>
+<td>50</td>
+<td>Jumps unconditionally to the specified instruction.</td>
+<td>None</td>
+<td>Instruction index</td>
+</tr>
+<tr>
+<td><code>JUMP_IF_FALSE</code></td>
+<td>51</td>
+<td>Jumps to the specified instruction if the top value is false.</td>
+<td>Pops: condition</td>
+<td>Instruction index</td>
+</tr>
+<tr>
+<td><code>JUMP_IF_TRUE</code></td>
+<td>52</td>
+<td>Jumps to the specified instruction if the top value is true.</td>
+<td>Pops: condition</td>
+<td>Instruction index</td>
+</tr>
+</tbody>
+</table>
+<h3 id="functions">Functions</h3>
+<table>
+<thead>
+<tr>
+<th>Opcode</th>
+<th>Value</th>
+<th>Description</th>
+<th>Stack Effect</th>
+<th>Arguments</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DEFINE_FUNC</code></td>
+<td>60</td>
+<td>Defines a function and stores it in the current scope.</td>
+<td>None</td>
+<td>Function name (string), constant index (function data)</td>
+</tr>
+<tr>
+<td><code>CALL_FUNC</code></td>
+<td>61</td>
+<td>Calls a function with the specified number of arguments.</td>
+<td>Pops: function, args; Pushes: result</td>
+<td>Number of arguments</td>
+</tr>
+<tr>
+<td><code>RETURN</code></td>
+<td>62</td>
+<td>Returns from a function with the top stack value.</td>
+<td>Pops: value; Pushes: value (to parent frame)</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>LOAD_LAMBDA</code></td>
+<td>63</td>
+<td>Loads a lambda function (closure) onto the stack.</td>
+<td>Pushes: closure</td>
+<td>Constant index (function data)</td>
+</tr>
+<tr>
+<td><code>DICT_FUNC_CALL</code></td>
+<td>64</td>
+<td>Calls a function stored in a dictionary.</td>
+<td>Pops: dict, key, args; Pushes: result</td>
+<td>Number of arguments</td>
+</tr>
+</tbody>
+</table>
+<h3 id="data-structures">Data Structures</h3>
+<table>
+<thead>
+<tr>
+<th>Opcode</th>
+<th>Value</th>
+<th>Description</th>
+<th>Stack Effect</th>
+<th>Arguments</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>BUILD_ARRAY</code></td>
+<td>70</td>
+<td>Builds an array from the top N stack elements.</td>
+<td>Pops: N elements; Pushes: array</td>
+<td>Number of elements</td>
+</tr>
+<tr>
+<td><code>BUILD_DICT</code></td>
+<td>71</td>
+<td>Builds a dictionary from N key-value pairs on the stack.</td>
+<td>Pops: N pairs (key, value); Pushes: dict</td>
+<td>Number of pairs</td>
+</tr>
+<tr>
+<td><code>ARRAY_ACCESS</code></td>
+<td>72</td>
+<td>Accesses an element in an array or dictionary.</td>
+<td>Pops: index, array/dict; Pushes: element</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>ARRAY_ASSIGN</code></td>
+<td>73</td>
+<td>Assigns a value to an array or dictionary element.</td>
+<td>Pops: value, index, array/dict; Pushes: value</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>GET_SIZE</code></td>
+<td>74</td>
+<td>Gets the size of a string, array, or dictionary.</td>
+<td>Pops: collection; Pushes: size</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>MULTI_DIM_ACCESS</code></td>
+<td>75</td>
+<td>Accesses a multi-dimensional array element.</td>
+<td>Pops: N indices, array; Pushes: element</td>
+<td>Number of indices</td>
+</tr>
+<tr>
+<td><code>MULTI_DIM_ASSIGN</code></td>
+<td>76</td>
+<td>Assigns a value to a multi-dimensional array element.</td>
+<td>Pops: value, N indices, array; Pushes: value</td>
+<td>Number of indices</td>
+</tr>
+</tbody>
+</table>
+<h3 id="io-operations">I/O Operations</h3>
+<table>
+<thead>
+<tr>
+<th>Opcode</th>
+<th>Value</th>
+<th>Description</th>
+<th>Stack Effect</th>
+<th>Arguments</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PRINT</code></td>
+<td>80</td>
+<td>Prints the top stack value.</td>
+<td>Pops: value</td>
+<td>None</td>
+</tr>
+</tbody>
+</table>
+<h3 id="miscellaneous">Miscellaneous</h3>
+<table>
+<thead>
+<tr>
+<th>Opcode</th>
+<th>Value</th>
+<th>Description</th>
+<th>Stack Effect</th>
+<th>Arguments</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POP</code></td>
+<td>90</td>
+<td>Pops and discards the top stack value.</td>
+<td>Pops: value</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>DUP</code></td>
+<td>91</td>
+<td>Duplicates the top stack value.</td>
+<td>Pushes: top value</td>
+<td>None</td>
+</tr>
+</tbody>
+</table>
+<h3 id="program-termination">Program Termination</h3>
+<table>
+<thead>
+<tr>
+<th>Opcode</th>
+<th>Value</th>
+<th>Description</th>
+<th>Stack Effect</th>
+<th>Arguments</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>HALT</code></td>
+<td>99</td>
+<td>Halts execution.</td>
+<td>None</td>
+<td>None</td>
+</tr>
+</tbody>
+</table>
+<h2 id="execution-model">Execution Model</h2>
+<p>The <code>BytecodeVM</code> operates as follows:</p>
+<ol>
+<li><strong>Initialization</strong>: Creates a global frame and initializes built-in functions (<code>to_string</code>, <code>to_number</code>, <code>split</code>, <code>substring</code>, <code>__append</code>, <code>size</code>, <code>word</code>).</li>
+<li><strong>Frame Management</strong>: Each function call creates a new <code>Frame</code> with its own stack, local variables, and closure environment. Frames are linked to parent frames for variable lookup.</li>
+<li><strong>Instruction Execution</strong>: The VM processes instructions sequentially, updating the instruction pointer (<code>ip</code>), stack, and variables. Jumps modify the <code>ip</code> for control flow.</li>
+<li><strong>Closures</strong>: Functions and lambdas capture their environment, allowing access to variables from outer scopes. The <code>Closure</code> class manages function code, parameters, constants, and environment.</li>
+<li><strong>Error Handling</strong>: The VM raises exceptions for invalid operations, undefined variables, division by zero, etc., stopping execution and reporting errors.</li>
+</ol>
+<h2 id="built-in-functions">Built-in Functions</h2>
+<p>The VM includes the following built-in functions, accessible in the global scope:</p>
+<ul>
+<li><code>to_string(value)</code>: Converts a value to a string.</li>
+<li><code>to_number(value)</code>: Converts a string to an integer or float.</li>
+<li><code>split(string, delimiter)</code>: Splits a string by a delimiter into an array.</li>
+<li><code>substring(string, start, [end])</code>: Extracts a substring from <code>start</code> to <code>end</code> (or end of string).</li>
+<li><code>__append(array, value)</code>: Appends a value to an array (internal use).</li>
+<li><code>size(collection)</code>: Returns the length of a string, array, or dictionary.</li>
+<li><code>word(number)</code>: Converts an integer (1–1000) to its English word representation (e.g., 42 → "fortytwo").</li>
+</ul>
+<h2 id="example">Example</h2>
+<p>Consider the AST for <code>2 + 3</code>:</p>
+<pre><code class="language-python">from AST.ast_1 import Integer, BinOp, Token
+ast = BinOp(Integer(2), Token('PLUS', '+', 0, 0), Integer(3))
+</code></pre>
+<p>The <code>BytecodeCompiler</code> generates:</p>
+<ul>
+<li><strong>Constants</strong>: <code>[2, 3]</code></li>
+<li><strong>Instructions</strong>:
+  <code>[(LOAD_CONST, 0),  # Load 2
+   (LOAD_CONST, 1),  # Load 3
+   (ADD,),           # Add them
+   (HALT,)]          # Stop</code></li>
+</ul>
+<p>The <code>BytecodeVM</code> executes this to produce <code>5</code>.</p>
+<h2 id="debugging">Debugging</h2>
+<p>Set <code>debug=True</code> in the <code>BytecodeVM</code> constructor to print:</p>
+<ul>
+<li>Current instruction pointer (<code>ip</code>).</li>
+<li>Executed opcode name.</li>
+<li>Stack contents.</li>
+<li>Local variables and closure environment (if applicable).</li>
+</ul>
+<p>This aids in tracing execution and diagnosing issues.</p>
+<h2 id="notes">Notes</h2>
+<ul>
+<li><strong>Variable Scope</strong>: Variables are looked up in the current frame's locals, then the closure environment, and finally parent frames.</li>
+<li><strong>Closures</strong>: Functions and lambdas capture their environment, ensuring proper variable access in nested scopes.</li>
+<li><strong>Data Structures</strong>: Arrays and dictionaries support dynamic creation and access, with multi-dimensional array operations for nested structures.</li>
+<li><strong>Error Handling</strong>: The VM provides detailed error messages for common issues, such as undefined variables or invalid operations.</li>
+<li><strong>Extensibility</strong>: New opcodes or built-in functions can be added by extending the <code>opcodes</code> module and <code>BytecodeVM</code>’s <code>_add_builtins</code> method.</li>
+</ul>
+<p>This bytecode design balances simplicity and functionality, supporting a wide range of programming constructs while maintaining efficient execution.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.f8cc74c7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.c8b220af.min.js"></script>
+      
+    
+  </body>
+</html>
