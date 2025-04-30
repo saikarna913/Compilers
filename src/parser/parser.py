@@ -1,8 +1,8 @@
-from src.lexer import (Lexer, Token, LET, IF, WHILE, FOR, FUNC, RETURN, PRINT, ELSE, ASSIGN, EQUALS,
+from src.lexer.lexer import (Lexer, Token, LET, IF, WHILE, FOR, FUNC, RETURN, PRINT, ELSE, ASSIGN, EQUALS,
                             PLUS, MINUS, MULTIPLY, DIVIDE, EXPONENT, REM, LPAREN, RPAREN, LBRACE, RBRACE,
                             LT, GT, LTE, GTE, EQEQ, NOTEQ, AND, OR, NOT, COMMA, LBRACKET, RBRACKET, COLON,
                             IDENTIFIER, INTEGER, FLOAT, STRING, TRUE, FALSE, EOF, TO, STEP, BREAK, CONTINUE)
-from src.ast_1 import (AST, BinOp, UnaryOp, Integer, Float, String, Boolean, Var, VarAssign, VarReassign, Block,
+from src.AST.ast_1 import (AST, BinOp, UnaryOp, Integer, Float, String, Boolean, Var, VarAssign, VarReassign, Block,
                            If, While, For, FuncDef, Return, FuncCall, Print, Array, Dict, Break, Continue, AstPrinter,
                            ArrayAccess, ArrayAssign, Lambda)
 from typing import List, Set

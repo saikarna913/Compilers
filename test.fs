@@ -1,50 +1,28 @@
-// Find all prime numbers up to n using the Sieve of Eratosthenes
-func sieveOfEratosthenes(n) {
-    // Initialize the sieve array
-    let sieve = []
-    for (let i = 0 to n + 1) {
-        sieve assign sieve + [True]
-    }
-    
-    // 0 and 1 are not prime
-    sieve[0] = False
-    sieve[1] = False
-    
-    // Mark non-primes
-    let p = 2
-    while (p * p <= n) {
-        // If p is prime, mark all its multiples
-        if (sieve[p] == True) {
-            for (let i = p * p to n + 1 step p) {
-                sieve[i] = False
+
+        func is_palindrome_number(n) {
+            // Check if a number is a palindrome by using arithmetic operations
+            let original = n
+            let reversed = 0
+            
+            while (n > 0) {
+                let digit = n % 10
+                reversed assign reversed * 10 + digit
+                n assign (n - digit) / 10
             }
+            
+            return original == reversed
         }
-        p assign p + 1
-    }
-    
-    // Collect all prime numbers
-    let primes = []
-    for (let i = 2 to n + 1) {
-        if (sieve[i] == True) {
-            primes assign primes + [i]
+        
+        func largest_palindrome_product() {
+            let max_pal = 0
+            for (let i = 100 to 999) {
+                for (let j = i to 999) {
+                    let prod = i * j
+                    if (is_palindrome_number(prod) and prod > max_pal) {
+                        max_pal assign prod
+                    }
+                }
+            }
+            return max_pal
         }
-    }
-    
-    return primes
-}
-
-// Find the sum of all primes below n
-func sumOfPrimes(n) {
-    let primes = sieveOfEratosthenes(n)
-    let sum = 0
-    let primesLen = len(primes)
-    for (let i = 0 to primesLen) {
-        sum assign sum + primes[i]
-    }
-    return sum
-}
-
-print("Primes up to 30: ")
-print(sieveOfEratosthenes(30))
-print("Sum of primes below 100: ")
-print(sumOfPrimes(100))  // Should be 1060
+        largest_palindrome_product()

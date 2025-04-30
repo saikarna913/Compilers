@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Union, Optional, List, Tuple, Any
-from src.lexer import Token  
+from src.lexer.lexer import Token  
 import re
 
 @dataclass
