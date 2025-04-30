@@ -1,28 +1,32 @@
 
-        func is_palindrome_number(n) {
-            // Check if a number is a palindrome by using arithmetic operations
-            let original = n
-            let reversed = 0
+    // Nested function definitions with multiple levels of variable capture
+    func outerFunction(x) {
+        let y = x * 2
+        
+        func middleFunction(z) {
+            // This function can access both x and y from parent scopes
+            let w = x + y + z
             
-            while (n > 0) {
-                let digit = n % 10
-                reversed assign reversed * 10 + digit
-                n assign (n - digit) / 10
+            func innerFunction() {
+                // This function can access all variables from all parent scopes
+                return x + y + z + w
             }
             
-            return original == reversed
+            return innerFunction
         }
         
-        func largest_palindrome_product() {
-            let max_pal = 0
-            for (let i = 100 to 999) {
-                for (let j = i to 999) {
-                    let prod = i * j
-                    if (is_palindrome_number(prod) and prod > max_pal) {
-                        max_pal assign prod
-                    }
-                }
-            }
-            return max_pal
-        }
-        largest_palindrome_product()
+        return middleFunction
+    }
+    
+    let middleFn = outerFunction(5)    // x=5, y=10
+    let innerFn = middleFn(3)          // z=3, w=18
+    
+    print "Result of innerFunction (should be 5+10+3+18=36):"
+    print innerFn()
+    
+    // Create another instance to ensure closures work properly
+    let anotherMiddleFn = outerFunction(2)   // x=2, y=4
+    let anotherInnerFn = anotherMiddleFn(1)  // z=1, w=7
+    
+    print "Result of another innerFunction (should be 2+4+1+7=14):"
+    print anotherInnerFn()
